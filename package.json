@@ -1,0 +1,22 @@
+{
+  "name": "rinbill",
+  "private": true,
+  "version": "1.0.0",
+  "description": "RINBILL - E-Commerce, Inventory, Billing & Management System",
+  "packageManager": "npm@11.6.2",
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "seed": "npm run seed -w backend",
+    "lint": "turbo run lint",
+    "clean": "turbo run clean"
+  },
+  "devDependencies": {
+    "turbo": "^2.5.0"
+  }
+}

@@ -9,73 +9,284 @@
 **Duration:** 3–5 days  
 **Goal:** User registration, login, JWT auth, role/permission system.
 
+> All tasks are flat-numbered (1, 2, 3...) in strict dependency order. Complete each before starting the next.
+
+---
+
 ### Backend Tasks
 
-| # | Task | Details |
-|---|---|---|
-| 1.1 | Initialize Express project | `npm init`, install deps, create folder structure per `01-system-architecture.md` |
-| 1.2 | Set up MongoDB connection | `config/db.js` — connect mongoose, handle connection events |
-| 1.3 | Create `Role` model | Fields: `name`, `permissions[]`, `description`. Seed: super_admin (all \*), billing_staff, ecommerce_staff, customer |
-| 1.4 | Create `User` model | Fields: `name`, `email`, `password`, `role` (ref Role), `phone`, `avatar`, `isActive`, `isVerified`, `refreshToken`, OTP fields. Pre-save hook: bcrypt hash password (12 rounds) |
-| 1.5 | Create auth middleware | `auth.js` — verify JWT from `Authorization: Bearer` header, attach `req.user` |
-| 1.6 | Create RBAC middleware | `rbac.js` — accept permission strings, check against `req.user.permissions`. Support wildcard `*` and `resource.*` patterns |
-| 1.7 | Build `POST /api/auth/register` | Validate input (Joi), create user, generate tokens, return user + tokens |
-| 1.8 | Build `POST /api/auth/login` | Find user by email, compare password, generate access token (15m) + refresh token (7d), set cookie |
-| 1.9 | Build `POST /api/auth/refresh` | Verify refresh token, issue new access token |
-| 1.10 | Build `POST /api/auth/forgot-password` | Generate 6-digit OTP, store hashed + expiry, send email |
-| 1.11 | Build `POST /api/auth/verify-otp` | Compare OTP, mark verified |
-| 1.12 | Build `POST /api/auth/reset-password` | Accept new password, hash and save |
-| 1.13 | Build `GET /api/auth/me` | Return current user with populated role + permissions |
-| 1.14 | Build `PUT /api/auth/me` | Update name, phone, avatar |
-| 1.15 | Create error handler middleware | Global handler for Mongoose validation, duplicate key, CastError, JWT errors |
-| 1.16 | Create rate limiter | `express-rate-limit` — 5 req/min for auth routes, 100/15min for general |
-| 1.17 | Seed script | `seeds/index.js` — create default roles, super admin user, default settings |
-| 1.18 | Add security middleware | `helmet`, `cors` (frontend origin), `morgan` (logging) |
+**✅ 1. Initialize backend project**
+- Files: `backend/package.json`, `backend/.env.example`, `backend/.env`, `backend/.eslintrc.cjs`, `backend/.prettierrc`, `backend/.gitignore`
+- Run `npm init`, install deps: express, mongoose, bcryptjs, jsonwebtoken, joi, helmet, cors, morgan, express-rate-limit, dotenv, cookie-parser
+- Create folder structure: `src/config/`, `src/models/`, `src/middleware/`, `src/routes/`, `src/controllers/`, `src/validators/`, `src/services/`, `seeds/`
+- **Done when:** `npm run dev` starts with no errors
 
-### Backend Testing
+**✅ 2. Create environment configuration**
+- File: `backend/src/config/env.js`
+- Load `.env` with dotenv, export validated config object: `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `JWT_ACCESS_EXPIRES` (15m), `JWT_REFRESH_EXPIRES` (7d), `FRONTEND_URL`, `NODE_ENV`
+- **Done when:** Config exports correct values from env
 
-| # | Test | What to Cover |
-|---|---|---|
-| T1.1 | Register | Success, duplicate email, missing fields, invalid email format, weak password |
-| T1.2 | Login | Success, wrong password, non-existent email, inactive user |
-| T1.3 | Token refresh | Success, expired refresh token, invalid token |
-| T1.4 | Forgot/Reset password | OTP generation, OTP expiry, invalid OTP, password reset, reuse protection |
-| T1.5 | Auth middleware | Missing token, expired token, malformed token, invalid signature |
-| T1.6 | RBAC middleware | Super admin passes all, billing staff can't create products, customer can't access admin |
-| T1.7 | Rate limiting | Exceed auth rate limit → 429 |
-| T1.8 | Error handler | Validation error shape, duplicate key error, cast error |
+**✅ 3. Set up MongoDB connection**
+- File: `backend/src/config/db.js`
+- Connect mongoose with retry logic, log connection success/failure events, handle graceful shutdown
+- **Done when:** Server logs "MongoDB connected" on startup
+
+**✅ 4. Create global error handler middleware**
+- File: `backend/src/middleware/errorHandler.js`
+- Handle: Mongoose ValidationError, duplicate key (code 11000), CastError, JWT errors (JsonWebTokenError, TokenExpiredError), generic AppError class
+- Return consistent JSON shape: `{ success: false, error: { code, message, details? } }`
+- **Done when:** Invalid ObjectId returns 404, duplicate email returns 409, missing body field returns 400
+
+**✅ 5. Create rate limiter middleware**
+- File: `backend/src/middleware/rateLimiter.js`
+- Auth limiter: 5 requests per minute on `/api/auth/*`
+- General limiter: 100 requests per 15 minutes on all other routes
+- **Done when:** 6 rapid auth requests return 429
+
+**✅ 6. Apply security middleware**
+- File: `backend/src/app.js`
+- Apply `helmet()`, `cors({ origin: FRONTEND_URL, credentials: true })`, `morgan('dev')`, `cookieParser()`, JSON body parser (limit 10mb)
+- **Done when:** Server responds with security headers, CORS allows frontend origin
+
+**✅ 7. Create Role model**
+- File: `backend/src/models/Role.js`
+- Fields: `name` (String, unique, enum), `permissions` ([String]), `description` (String)
+- Timestamps: true
+- **Done when:** Role schema validates, can create/query roles
+
+**✅ 8. Create User model**
+- File: `backend/src/models/User.js`
+- Fields: `name`, `email` (unique, lowercase), `password`, `role` (ObjectId ref Role), `phone`, `avatar`, `isActive` (default true), `isVerified` (default false), `refreshToken`, `resetPasswordOTP`, `resetPasswordExpires`
+- Pre-save hook: hash password with bcrypt (12 rounds) only if modified
+- Instance method: `comparePassword(candidatePassword)` → boolean
+- Indexes: `email` (unique), `role`
+- **Done when:** Password auto-hashes on create, comparePassword works, duplicate email throws
+
+**✅ 9. Create auth JWT middleware**
+- File: `backend/src/middleware/auth.js`
+- Extract token from `Authorization: Bearer <token>` header
+- Verify with `JWT_ACCESS_SECRET`, decode payload `{ id, role }`
+- Find user by id, attach `req.user` with populated role + permissions
+- Throw 401 if: no token, invalid token, expired token, user not found, user inactive
+- **Done when:** Valid token attaches user, invalid token returns 401
+
+**✅ 10. Create RBAC middleware**
+- File: `backend/src/middleware/rbac.js`
+- Accepts variadic permission strings: `rbac('product.create', 'product.update')`
+- Super admin (`*`) bypasses all checks
+- Support wildcard pattern: `resource.*` matches any action on resource
+- Throw 403 with `FORBIDDEN` code if none match
+- **Done when:** Super admin passes any check; billing staff blocked on `product.create`
+
+**✅ 11. Create Joi auth validators**
+- File: `backend/src/validators/auth.validator.js`
+- Schemas: `registerSchema` (name, email, password min 6, confirmPassword), `loginSchema` (email, password), `forgotPasswordSchema` (email), `verifyOtpSchema` (email, otp), `resetPasswordSchema` (email, otp, password, confirmPassword), `updateProfileSchema` (name, phone, avatar)
+- Export wrapped middleware: `validate(schema)` that validates `req.body`
+- **Done when:** Missing fields return 400 with field-level details
+
+**✅ 12. Build POST /api/auth/register**
+- Files: `backend/src/controllers/auth.controller.js`, `backend/src/routes/auth.routes.js`
+- Validate body → check email uniqueness → create user with `customer` role → generate access token (15m) + refresh token (7d) → return user (no password) + tokens
+- **Done when:** Valid registration creates user and returns tokens
+
+**✅ 13. Build POST /api/auth/login**
+- Same controller file
+- Find user by email → compare password → check isActive → generate tokens → set refresh token as httpOnly cookie → return user + access token
+- Rate limited via auth limiter
+- **Done when:** Correct credentials return tokens; wrong password returns 401
+
+**✅ 14. Build POST /api/auth/refresh**
+- Same controller file
+- Accept refresh token from body or cookie → verify with `JWT_REFRESH_SECRET` → find user, compare stored hash → issue new access token
+- Rotate refresh token (issue new one, invalidate old)
+- **Done when:** Valid refresh token returns new access token; expired returns 401
+
+**✅ 15. Build POST /api/auth/forgot-password**
+- Same controller file
+- Find user by email → generate 6-digit OTP → hash + store OTP with 10min expiry → send email (or log in dev) → return success (always, even if email not found — security)
+- **Done when:** OTP is stored hashed on user doc, email sent
+
+**✅ 16. Build POST /api/auth/verify-otp**
+- Same controller file
+- Find user by email → compare OTP (hash comparison) → check expiry → mark `isVerified = true` → return success token
+- **Done when:** Correct OTP within 10min verifies; expired/invalid returns 400
+
+**✅ 17. Build POST /api/auth/reset-password**
+- Same controller file
+- Verify OTP again → hash new password → save → clear OTP fields → return success
+- **Done when:** Password updated, old password no longer works
+
+**✅ 18. Build GET/PUT /api/auth/me**
+- Same controller file (protected routes)
+- `GET`: Return `req.user` with populated role + permissions (strip password, refreshToken)
+- `PUT`: Validate body (name, phone, avatar), update fields, return updated user
+- Also add `PUT /api/auth/me/password` for changing password while logged in (requires oldPassword)
+- **Done when:** Authenticated user can view and update profile
+
+**✅ 19. Wire up Express app**
+- File: `backend/src/app.js`
+- Import and apply: security middleware, rate limiters, routes (`/api/auth`), error handler (last)
+- Create `backend/src/server.js`: import app, connect DB, listen on PORT, handle unhandled rejections
+- **Done when:** Server starts, `/api/auth/register` responds
+
+**✅ 20. Create seed script**
+- File: `backend/seeds/index.js`
+- Seed 4 default roles: `super_admin` (permissions: `['*']`), `billing_staff` (billing.*, customer.read, etc.), `ecommerce_staff` (product.*, inventory.*, etc.), `customer` (product.read, order.*, invoice.read)
+- Seed super admin user: email `admin@rinbill.com`, password `Admin@123`, role `super_admin`
+- Seed default settings: `{ key: 'gstEnabled', value: false }`, `{ key: 'multiWarehouse', value: false }`
+- Run via `node seeds/index.js`
+- **Done when:** Running seed populates DB with roles + admin user + settings
+
+**✅ 21. Backend integration tests**
+- File: `backend/tests/auth.test.js`
+- Test register: success, duplicate email, weak password, missing fields
+- Test login: success, wrong password, inactive user, non-existent email
+- Test refresh: success, expired token, invalid token
+- Test forgot/reset: OTP generation, OTP expiry, correct reset, reuse blocked
+- Test auth middleware: missing token → 401, expired token → 401, malformed → 401
+- Test RBAC: super admin = pass all, billing staff blocked on product.create
+- Test rate limiting: 6 rapid auth requests → 429
+- Test error handler: CastError → 404, duplicate key → 409, validation → 400
+- **Done when:** `npm test` passes all 8 test groups
+
+---
 
 ### Frontend Tasks
 
-| # | Task | Details |
-|---|---|---|
-| 1.19 | Initialize Vite + React project | `npm create vite@latest`, install Tailwind + PostCSS + Autoprefixer + shadcn |
-| 1.20 | Configure shadcn UI | `npx shadcn-ui@latest init`, add: button, input, card, form, dialog, toast, label, separator |
-| 1.21 | Set up Redux store | `configureStore` with authSlice, uiSlice. Configure Redux Provider |
-| 1.22 | Set up React Query | `QueryClientProvider` with default staleTime (5min) |
-| 1.23 | Create Axios instance | Base URL, interceptor for Bearer token, 401 → refresh → retry, unwrap response envelope |
-| 1.24 | Create authSlice | State: `user`, `accessToken`, `isAuthenticated`, `isLoading`. Thunks: `login`, `register`, `refreshToken`, `logout`, `updateProfile` |
-| 1.25 | Create LoginPage | Email + password form, validation, error display, redirect to dashboard on success |
-| 1.26 | Create RegisterPage | Name, email, password, confirm password. Redirect to login after success |
-| 1.27 | Create ForgotPasswordPage | Email input → OTP input → new password form |
-| 1.28 | Create AuthLayout | Centered card layout for auth pages, logo |
-| 1.29 | Create AdminLayout | Sidebar (collapsible) + header (user menu) + `<Outlet>`. Role-based nav groups |
-| 1.30 | Create CustomerLayout | Navbar (logo, search, cart icon, user menu) + footer + `<Outlet>` |
-| 1.31 | Create ProtectedRoute | Check `isAuthenticated`, redirect to `/account/login` |
-| 1.32 | Create AdminRoute | Check auth + role permissions, redirect to `/admin` on failure |
-| 1.33 | Create AppRoutes | Compose all route groups with lazy loading |
-| 1.34 | Create ProfilePage | Display + edit name, email, phone, avatar |
+**✅ 22. Initialize Vite + React project**
+- Run: `npm create vite@latest frontend -- --template react` in `backend/` parent (or manually create `frontend/`)
+- Install: tailwindcss, postcss, autoprefixer, react-router-dom, @reduxjs/toolkit, react-redux, @tanstack/react-query, axios, lucide-react, react-hot-toast
+- Run `npx tailwindcss init -p`, configure `content` paths
+- Create basic `frontend/vite.config.js` with path alias `@/` → `src/`
+- **Done when:** `npm run dev` shows default Vite page
 
-### Frontend Testing
+**✅ 23. Configure shadcn UI**
+- Run `npx shadcn-ui@latest init` with defaults
+- Add components: button, input, card, form, dialog, toast, label, separator, avatar, dropdown-menu, sheet, skeleton, badge
+- Update `frontend/components.json` if needed
+- **Done when:** A shadcn `<Button>` renders correctly on page
 
-| # | Test | What to Cover |
-|---|---|---|
-| T1.9 | LoginPage | Renders form, validates empty fields, shows error on bad credentials, navigates on success |
-| T1.10 | RegisterPage | Validates password match, shows server errors, redirects on success |
-| T1.11 | ProtectedRoute | Redirects unauthenticated users, renders children when authenticated |
-| T1.12 | AdminRoute | Blocks billing staff from product routes, allows super admin |
-| T1.13 | authSlice | Login sets user + token, logout clears state, refreshToken updates token |
-| T1.14 | Axios interceptor | Attaches token, retries on 401, dispatches logout on refresh failure |
+**✅ 24. Set up Redux store**
+- File: `frontend/src/app/store.js`
+- `configureStore({ reducer: { auth: authReducer, ui: uiReducer } })`
+- Wrap `<App />` with `<Provider store={store}>` in `main.jsx`
+- **Done when:** Redux DevTools show store initialized
+
+**✅ 25. Set up React Query**
+- File: `frontend/src/main.jsx`
+- Create `QueryClient` with `defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1 } }`
+- Wrap app with `<QueryClientProvider client={queryClient}>`
+- **Done when:** React Query DevTools available (dev mode)
+
+**✅ 26. Create Axios instance**
+- File: `frontend/src/api/axios.js`
+- Base URL from `import.meta.env.VITE_API_URL` (default `http://localhost:5000/api`)
+- Request interceptor: attach `Authorization: Bearer <token>` from Redux store
+- Response interceptor: on 401, attempt token refresh via `/api/auth/refresh`, retry original request; if refresh fails, dispatch `logout()`
+- Unwrap response envelope: `response.data.data` → return data directly
+- **Done when:** Authenticated requests include Bearer token; expired token auto-refreshes
+
+**✅ 27. Create authSlice**
+- File: `frontend/src/features/auth/authSlice.js`
+- Initial state: `{ user: null, accessToken: null, isAuthenticated: false, isLoading: false }`
+- Async thunks using `createAsyncThunk`: `login`, `register`, `refreshToken`, `logout`, `updateProfile`
+- Reducers: `setCredentials`, `clearCredentials`, `setUser`
+- Extra reducers handle all thunk states (pending/fulfilled/rejected)
+- **Done when:** Dispatching `login` thunk sets user + token in state
+
+**✅ 28. Create uiSlice**
+- File: `frontend/src/features/ui/uiSlice.js`
+- State: `{ sidebarOpen: true, theme: 'light' }`
+- Reducers: `toggleSidebar`, `setTheme`
+- **Done when:** Sidebar state toggles
+
+**✅ 29. Create AuthLayout**
+- File: `frontend/src/layouts/AuthLayout.jsx`
+- Centered card layout on gradient background
+- Renders logo + `<Outlet />` for auth pages (login, register, forgot-password)
+- Responsive: full-screen on mobile, card max-w-md on desktop
+- **Done when:** Auth pages display centered with consistent styling
+
+**✅ 30. Create AdminLayout**
+- File: `frontend/src/layouts/AdminLayout.jsx`
+- Sidebar (collapsible via sheet on mobile, fixed on desktop): logo, role-based nav groups, no GST links
+- Header: search bar (placeholder), notification bell, user menu dropdown (profile, logout)
+- Main content area: `<Outlet />`
+- Nav groups conditionally rendered based on user permissions
+- **Done when:** Admin sees sidebar matching their role; billing staff can't see Products nav
+
+**✅ 31. Create CustomerLayout**
+- File: `frontend/src/layouts/CustomerLayout.jsx`
+- Header: logo, main nav (Home, Products), search bar, cart icon (badge count, placeholder), user menu
+- Footer: links, contact info, social icons (placeholder)
+- Main content: `<Outlet />`
+- Mobile: hamburger menu, slide-out nav
+- **Done when:** Customer layout renders with nav links
+
+**✅ 32. Create ProtectedRoute**
+- File: `frontend/src/routes/ProtectedRoute.jsx`
+- Check `isAuthenticated` from Redux auth state
+- If not authenticated, redirect to `/account/login` with `?redirect=` param
+- If loading (token refresh in progress), show spinner/skeleton
+- Otherwise render `<Outlet />`
+- **Done when:** Unauthenticated user redirected to login
+
+**✅ 33. Create AdminRoute**
+- File: `frontend/src/routes/AdminRoute.jsx`
+- Same as ProtectedRoute, but additionally check user role is staff (not customer)
+- If unauthorized, redirect to `/admin` with error toast
+- **Done when:** Customer trying to access `/admin` gets redirected
+
+**✅ 34. Create LoginPage**
+- File: `frontend/src/pages/customer/auth/LoginPage.jsx`
+- Email + password form with validation (required fields, email format)
+- Submit dispatches `login` thunk
+- On success: redirect to `?redirect` param or `/` for customers, `/admin` for staff
+- Error display from rejected thunk
+- "Forgot password?" link, "Register" link
+- **Done when:** Valid credentials log in and redirect; invalid shows error
+
+**✅ 35. Create RegisterPage**
+- File: `frontend/src/pages/customer/auth/RegisterPage.jsx`
+- Name, email, password, confirm password form
+- Client-side validation: password match, min length, valid email
+- Submit dispatches `register` thunk
+- On success: redirect to login page with success toast
+- **Done when:** Registration creates account, redirects to login
+
+**✅ 36. Create ForgotPasswordPage**
+- File: `frontend/src/pages/customer/auth/ForgotPasswordPage.jsx`
+- Multi-step: step 1 → email input (send OTP), step 2 → OTP input, step 3 → new password + confirm
+- Each step validates then calls corresponding API
+- On complete: redirect to login with success message
+- Back/retry navigation between steps
+- **Done when:** Full password reset flow works end-to-end
+
+**✅ 37. Create ProfilePage**
+- File: `frontend/src/pages/customer/account/ProfilePage.jsx`
+- Display user info: name, email, phone, avatar
+- Edit mode: inline fields, avatar upload (placeholder), save dispatches `updateProfile`
+- **Done when:** User can view and update their profile
+
+**✅ 38. Create AppRoutes**
+- File: `frontend/src/routes/AppRoutes.jsx`
+- Compose all route groups using `createBrowserRouter` or `<Routes>`:
+  - Public: `/` (placeholder HomePage), `/account/login`, `/account/register`, `/account/forgot-password`
+  - Customer protected (wrapped in CustomerLayout + ProtectedRoute): `/account/profile`
+  - Admin protected (wrapped in AdminLayout + AdminRoute): `/admin` (placeholder dashboard)
+- Lazy load page components with `React.lazy()` + `<Suspense>`
+- Catch-all 404 page
+- **Done when:** All routes render correct layout + guard combination
+
+**✅ 39. Frontend component tests**
+- File: `frontend/src/__tests__/LoginPage.test.jsx`, etc.
+- Test LoginPage: renders form, validates empty fields, shows server error, navigates on success
+- Test RegisterPage: validates password match, shows errors, redirects on success
+- Test ProtectedRoute: redirects unauthenticated, renders children when authenticated
+- Test AdminRoute: blocks customer, allows super admin
+- Test authSlice: login sets user+token, logout clears, refresh updates
+- Test Axios interceptor: attaches token, retries on 401, dispatches logout on refresh fail
+- **Done when:** `npm test` passes all 6 test groups
 
 ---
 
