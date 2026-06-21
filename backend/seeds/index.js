@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import Role from '../src/models/Role.js';
 import User from '../src/models/User.js';
+import Setting from '../src/models/Setting.js';
 import connectDB from '../src/config/db.js';
 
 const defaultRoles = [
@@ -76,10 +77,6 @@ const seed = async () => {
     console.log('Roles seeded');
 
     console.log('Seeding settings...');
-    const Setting = mongoose.model('Setting', new mongoose.Schema({
-      key: { type: String, unique: true },
-      value: { type: mongoose.Schema.Types.Mixed },
-    }));
     for (const setting of defaultSettings) {
       await Setting.findOneAndUpdate(
         { key: setting.key },

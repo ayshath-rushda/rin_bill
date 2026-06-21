@@ -36,7 +36,6 @@ categorySchema.pre('save', function (next) {
   next();
 });
 
-categorySchema.index({ slug: 1 }, { unique: true });
 categorySchema.index({ isActive: 1 });
 
 export default mongoose.model('Category', categorySchema);

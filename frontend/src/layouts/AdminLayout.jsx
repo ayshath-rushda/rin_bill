@@ -43,6 +43,8 @@ const navGroups = [
     roles: ['super_admin', 'ecommerce_staff'],
     items: [
       { to: '/admin/products', icon: Package, label: 'All Products' },
+      { to: '/admin/categories', icon: Package, label: 'Categories' },
+      { to: '/admin/brands', icon: Package, label: 'Brands' },
     ],
   },
   {

@@ -134,7 +134,14 @@ export const getFeatured = async (req, res, next) => {
 
 export const getBySlug = async (req, res, next) => {
   try {
-    const product = await Product.findOne({ slug: req.params.slug })
+    const { slug } = req.params;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
+
+    const query = isObjectId
+      ? { $or: [{ _id: slug }, { slug }] }
+      : { slug };
+
+    const product = await Product.findOne(query)
       .populate('category brand')
       .lean();
 

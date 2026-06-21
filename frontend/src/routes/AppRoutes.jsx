@@ -13,6 +13,11 @@ const RegisterPage = lazy(() => import('@/pages/customer/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/customer/auth/ForgotPasswordPage'));
 const ProfilePage = lazy(() => import('@/pages/customer/account/ProfilePage'));
 
+const CategoryList = lazy(() => import('@/pages/admin/products/CategoryList'));
+const BrandList = lazy(() => import('@/pages/admin/products/BrandList'));
+const ProductList = lazy(() => import('@/pages/admin/products/ProductList'));
+const ProductForm = lazy(() => import('@/pages/admin/products/ProductForm'));
+
 const PageLoader = () => (
   <div className="p-6 space-y-4">
     <Skeleton className="h-8 w-64" />
@@ -34,8 +39,8 @@ function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* Customer Website */}
-        <Route element={<CustomerLayout />}>
-          <Route index element={<Navigate to="/account/login" replace />} />
+          <Route element={<CustomerLayout />}>
+          <Route index element={<div className="p-6"><h1 className="text-2xl font-bold">Home</h1><p className="text-muted-foreground">Welcome to RINBILL</p></div>} />
           <Route path="products" element={<div className="p-6"><h1 className="text-2xl font-bold">Products</h1><p className="text-muted-foreground">Coming soon</p></div>} />
 
           {/* Customer Auth Pages */}
@@ -56,6 +61,11 @@ function AppRoutes() {
         <Route element={<AdminRoute />}>
           <Route element={<AdminLayout />}>
             <Route path="admin" element={<div className="p-6"><h1 className="text-2xl font-bold">Dashboard</h1><p className="text-muted-foreground">Coming soon</p></div>} />
+            <Route path="admin/products" element={<ProductList />} />
+            <Route path="admin/products/new" element={<ProductForm />} />
+            <Route path="admin/products/:id/edit" element={<ProductForm />} />
+            <Route path="admin/categories" element={<CategoryList />} />
+            <Route path="admin/brands" element={<BrandList />} />
           </Route>
         </Route>
 

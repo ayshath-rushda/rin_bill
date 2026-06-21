@@ -98,12 +98,9 @@ productSchema.pre('save', function (next) {
   next();
 });
 
-productSchema.index({ slug: 1 }, { unique: true });
 productSchema.index({ name: 'text', description: 'text' });
 productSchema.index({ category: 1, status: 1 });
 productSchema.index({ status: 1, createdAt: -1 });
 productSchema.index({ sellingPrice: 1 });
-productSchema.index({ code: 1 }, { unique: true });
-productSchema.index({ sku: 1 }, { unique: true });
 
 export default mongoose.model('Product', productSchema);

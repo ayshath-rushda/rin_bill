@@ -299,60 +299,60 @@
 
 | # | Task | Details |
 |---|---|---|
-| 2.1 | Create `Category` model | `name`, `slug` (auto, unique), `image`, `description`, `isActive` |
-| 2.2 | Create `Brand` model | `name`, `logo`, `description` |
-| 2.3 | Create `Product` model | All fields per OVERVIEW.md: `name`, `code` (unique, auto-gen), `sku` (unique), `category` (ref), `brand` (ref), `vehicleCompatibility[]`, `description`, `shortDescription`, `images[]`, `galleryImages[]`, `sellingPrice`, `costPrice`, `stock`, `lowStockLimit`, `weight`, `status` (active/inactive/draft), `hsnCode`, `gstRate` |
-| 2.4 | Configure Cloudinary | `config/cloudinary.js` — SDK + multer-storage-cloudinary. Folder routing by resource type |
-| 2.5 | Build Category CRUD routes | `GET /api/categories` (public active), `GET /all` (admin), `POST`, `PUT /:id`, `DELETE /:id` |
-| 2.6 | Build Brand CRUD routes | `GET /api/brands` (public), `POST`, `PUT /:id`, `DELETE /:id` |
-| 2.7 | Build Product CRUD routes | `GET /api/products` (search, filter, sort, paginate), `GET /featured` (sections), `GET /:slug`, `POST`, `PUT /:id`, `DELETE /:id` (soft delete) |
-| 2.8 | Build product image upload | `POST /api/products/:id/images` — accept array (max 10), upload to Cloudinary, store URLs |
-| 2.9 | Build product image delete | `DELETE /api/products/:id/images/:imageId` — destroy on Cloudinary, remove URL from array |
-| 2.10 | Build product listing query | Text search ($or with $regex), filter by category/brand/price range, sort (price_asc, price_desc, newest, name), offset pagination |
-| 2.11 | Add Joi validators | `createProductSchema`, `updateProductSchema`, category schema, brand schema. Conditional GST fields based on gstEnabled context |
-| 2.12 | Create pagination helper | `utils/paginate.js` — generic paginate(Model, query, options) returning `{ data, meta }` |
+| ✅ 2.1 | Create `Category` model | `name`, `slug` (auto, unique), `image`, `description`, `isActive` |
+| ✅ 2.2 | Create `Brand` model | `name`, `logo`, `description` |
+| ✅ 2.3 | Create `Product` model | All fields per OVERVIEW.md: `name`, `code` (unique, auto-gen), `sku` (unique), `category` (ref), `brand` (ref), `vehicleCompatibility[]`, `description`, `shortDescription`, `images[]`, `galleryImages[]`, `sellingPrice`, `costPrice`, `stock`, `lowStockLimit`, `weight`, `status` (active/inactive/draft), `hsnCode`, `gstRate` |
+| ✅ 2.4 | Configure Cloudinary | `config/cloudinary.js` — SDK + multer-storage-cloudinary. Folder routing by resource type |
+| ✅ 2.5 | Build Category CRUD routes | `GET /api/categories` (public active), `GET /all` (admin), `POST`, `PUT /:id`, `DELETE /:id` |
+| ✅ 2.6 | Build Brand CRUD routes | `GET /api/brands` (public), `POST`, `PUT /:id`, `DELETE /:id` |
+| ✅ 2.7 | Build Product CRUD routes | `GET /api/products` (search, filter, sort, paginate), `GET /featured` (sections), `GET /:slug`, `POST`, `PUT /:id`, `DELETE /:id` (soft delete) |
+| ✅ 2.8 | Build product image upload | `POST /api/products/:id/images` — accept array (max 10), upload to Cloudinary, store URLs |
+| ✅ 2.9 | Build product image delete | `DELETE /api/products/:id/images/:imageId` — destroy on Cloudinary, remove URL from array |
+| ✅ 2.10 | Build product listing query | Text search ($or with $regex), filter by category/brand/price range, sort (price_asc, price_desc, newest, name), offset pagination |
+| ✅ 2.11 | Add Joi validators | `createProductSchema`, `updateProductSchema`, category schema, brand schema. Conditional GST fields based on gstEnabled context |
+| ✅ 2.12 | Create pagination helper | `utils/paginate.js` — generic paginate(Model, query, options) returning `{ data, meta }` |
 
 ### Backend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T2.1 | Category CRUD | Create, update, delete, list active only, duplicate name slug, delete with products attached (block) |
-| T2.2 | Brand CRUD | Same pattern as categories |
-| T2.3 | Product create | All required fields, duplicate code/SKU, invalid category ref, missing sellingPrice |
-| T2.4 | Product update | Partial update, changing category, clearing images |
-| T2.5 | Product listing | Search by name/code/SKU, filter by category/brand/price, sort, pagination metadata |
-| T2.6 | Product delete | Soft delete (status = inactive), re-activate |
-| T2.7 | Image upload | Success, exceeds max count, invalid file type, file too large, no auth |
-| T2.8 | Image delete | Success, invalid imageId, Cloudinary destroy error |
-| T2.9 | Auth + RBAC | Public can only list active products, billing staff cannot create/edit |
+| ✅ T2.1 | Category CRUD | Create, update, delete, list active only, duplicate name slug, delete with products attached (block) |
+| ✅ T2.2 | Brand CRUD | Same pattern as categories |
+| ✅ T2.3 | Product create | All required fields, duplicate code/SKU, invalid category ref, missing sellingPrice |
+| ✅ T2.4 | Product update | Partial update, changing category, clearing images |
+| ✅ T2.5 | Product listing | Search by name/code/SKU, filter by category/brand/price, sort, pagination metadata |
+| ✅ T2.6 | Product delete | Soft delete (status = inactive), re-activate |
+| ✅ T2.7 | Image upload | Success, exceeds max count, invalid file type, file too large, no auth |
+| ✅ T2.8 | Image delete | Success, invalid imageId, Cloudinary destroy error |
+| ✅ T2.9 | Auth + RBAC | Public can only list active products, billing staff cannot create/edit |
 
 ### Frontend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 2.13 | Create DataTable component | Reusable table: columns config, sortable headers, loading skeleton, empty state, row click |
-| 2.14 | Create SearchInput component | Debounced input (400ms), clear button |
-| 2.15 | Create Pagination component | Page numbers, prev/next, page size selector |
-| 2.16 | Create ConfirmDialog component | Modal: title, message, confirm/cancel buttons, destructive variant |
-| 2.17 | Create FileUpload component | Drag-and-drop zone, preview thumbnails, remove individual, upload progress |
-| 2.18 | Create CategoryList page | DataTable + Create/Edit dialog (name, description, image upload, status toggle) |
-| 2.19 | Create BrandList page | DataTable + Create/Edit dialog (name, description, logo upload) |
-| 2.20 | Create ProductList page | DataTable with search, filter dropdowns (category, brand, status, price range), pagination, toolbar (new, export) |
-| 2.21 | Create ProductForm page | Full form: name, code, SKU, category select (searchable), brand select, price fields, rich text description, short description, vehicle compatibility (tag input), image uploader, gallery uploader, stock fields, status, weight |
-| 2.22 | Create product API module | `api/product.api.js` — getAll, getBySlug, create, update, delete, uploadImages, deleteImage |
-| 2.23 | Create category API module | `api/category.api.js` — getAll, create, update, delete |
-| 2.24 | Create brand API module | Same pattern |
+| ✅ 2.13 | Create DataTable component | Reusable table: columns config, sortable headers, loading skeleton, empty state, row click |
+| ✅ 2.14 | Create SearchInput component | Debounced input (400ms), clear button |
+| ✅ 2.15 | Create Pagination component | Page numbers, prev/next, page size selector |
+| ✅ 2.16 | Create ConfirmDialog component | Modal: title, message, confirm/cancel buttons, destructive variant |
+| ✅ 2.17 | Create FileUpload component | Drag-and-drop zone, preview thumbnails, remove individual, upload progress |
+| ✅ 2.18 | Create CategoryList page | DataTable + Create/Edit dialog (name, description, image upload, status toggle) |
+| ✅ 2.19 | Create BrandList page | DataTable + Create/Edit dialog (name, description, logo upload) |
+| ✅ 2.20 | Create ProductList page | DataTable with search, filter dropdowns (category, brand, status, price range), pagination, toolbar (new, export) |
+| ✅ 2.21 | Create ProductForm page | Full form: name, code, SKU, category select (searchable), brand select, price fields, rich text description, short description, vehicle compatibility (tag input), image uploader, gallery uploader, stock fields, status, weight |
+| ✅ 2.22 | Create product API module | `api/product.api.js` — getAll, getBySlug, create, update, delete, uploadImages, deleteImage |
+| ✅ 2.23 | Create category API module | `api/category.api.js` — getAll, create, update, delete |
+| ✅ 2.24 | Create brand API module | Same pattern |
 
 ### Frontend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T2.10 | CategoryList | Renders table, opens create dialog, submits form, shows success toast |
-| T2.11 | ProductForm | Validates required fields, shows validation errors, submits with FormData, handles upload progress |
-| T2.12 | DataTable | Renders columns, shows loading skeleton, handles empty state, calls onRowClick |
-| T2.13 | SearchInput | Debounces value, calls onChange after delay, clears input |
-| T2.14 | Pagination | Renders page numbers, disables prev on page 1, calls onChange |
-| T2.15 | FileUpload | Shows previews, removes on click, calls onUpload with FormData |
+| ✅ T2.10 | CategoryList | Renders table, opens create dialog, submits form, shows success toast |
+| ✅ T2.11 | ProductForm | Validates required fields, shows validation errors, submits with FormData, handles upload progress |
+| ✅ T2.12 | DataTable | Renders columns, shows loading skeleton, handles empty state, calls onRowClick |
+| ✅ T2.13 | SearchInput | Debounces value, calls onChange after delay, clears input |
+| ✅ T2.14 | Pagination | Renders page numbers, disables prev on page 1, calls onChange |
+| ✅ T2.15 | FileUpload | Shows previews, removes on click, calls onUpload with FormData |
 
 ---
 
@@ -844,8 +844,8 @@
 
 | Phase | Backend Tasks | Backend Tests | Frontend Tasks | Frontend Tests | Est. Days |
 |---|---|---|---|---|---|
-| 1 | Auth + Roles | 18 | 8 | 16 | 6 | 3–5 |
-| 2 | Product Management | 12 | 9 | 12 | 6 | 4–6 |
+| ✅ 1 | Auth + Roles | 18 | 8 | 16 | 6 | 3–5 |
+| ✅ 2 | Product Management | 12 | 9 | 12 | 6 | 4–6 |
 | 3 | Inventory Management | 9 | 6 | 7 | 3 | 3–4 |
 | 4 | Homepage CMS | 7 | 4 | 4 | 2 | 2–3 |
 | 5 | Customer Website | 2 | 2 | 5 | 3 | 4–5 |
