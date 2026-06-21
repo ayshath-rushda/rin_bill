@@ -356,55 +356,84 @@
 
 ---
 
-## Phase 3: Inventory Management
+## ✅ Phase 3: Inventory Management
 
 **Duration:** 3–4 days  
-**Goal:** Stock tracking, in/out/adjust, history, low-stock alerts.
+**Goal:** Stock tracking via stock-in/out/adjust operations with full audit trail and low-stock alerts.
+
+> **Architectural Decision:** Product model already has `stock` + `lowStockLimit` fields (Phase 2). We use Product.stock as single source of truth — no separate Inventory model (avoids sync issues). StockTransaction model provides the full audit trail.
 
 ### Backend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 3.1 | Create `Inventory` model | `product` (unique ref), `quantity` |
-| 3.2 | Create `StockTransaction` model | `product` (ref), `type` (in/out/adjustment), `quantity`, `previousStock`, `newStock`, `reason`, `reference` (order no.), `user` (ref) |
-| 3.3 | Build `POST /api/inventory/stock-in` | Find/create inventory, increment quantity, log transaction with reason |
-| 3.4 | Build `POST /api/inventory/stock-out` | Check sufficient stock, decrement, log transaction (reason: damaged, expired, etc.) |
-| 3.5 | Build `POST /api/inventory/adjust` | Set exact quantity (Super Admin only), log with reason |
-| 3.6 | Build `GET /api/inventory` | Stock overview with product details (populated) |
-| 3.7 | Build `GET /api/inventory/history` | Paginated transactions, filterable by product/type/date range |
-| 3.8 | Build `GET /api/inventory/low-stock` | Products where `stock <= lowStockLimit`, ordered by stock ascending |
-| 3.9 | Auto-create inventory on product creation | Post-save hook on Product model, or in product controller after create |
+| 3.1 | Create `StockTransaction` model | `backend/src/models/StockTransaction.js` — fields: `product` (ref, indexed), `type` (enum: stock_in/stock_out/adjustment), `quantity` (positive int), `previousStock`, `newStock`, `reason` (string), `reference` (optional string, e.g. order no.), `user` (ref). Timestamps: true |
+| 3.2 | Add `inventory.update` permission to seed | `backend/seeds/index.js` — `ecommerce_staff` permissions add `'inventory.update'`. Re-seed is idempotent via `$addToSet` |
+| 3.3 | Build `POST /api/inventory/stock-in` | `inventory.controller.js` — validate `{ productId, quantity, reason }`. Find product, `$inc: { stock: quantity }` atomically, read previousStock from doc, log StockTransaction. Wrap in session for atomicity |
+| 3.4 | Build `POST /api/inventory/stock-out` | Same controller — validate `{ productId, quantity, reason }`. Use `findOneAndUpdate` with `{ stock: { $gte: quantity } }` filter to atomically check + decrement. No match → 409 `INSUFFICIENT_STOCK`. Log transaction |
+| 3.5 | Build `POST /api/inventory/adjust` | Same controller — validate `{ productId, quantity, reason }`. Set exact quantity via `findByIdAndUpdate`. Log StockTransaction with previous→new. **Super Admin only** (rbac + code guard) |
+| 3.6 | Build `GET /api/inventory` | All products with selected fields: `name`, `code`, `sku`, `stock`, `lowStockLimit`, `status`, `category` (populated name). Paginated |
+| 3.7 | Build `GET /api/inventory/:productId` | Single product stock detail |
+| 3.8 | Build `GET /api/inventory/history` | Paginated StockTransactions, filterable by `product`, `type`, `dateFrom`, `dateTo`. Populate `product` (name, code) + `user` (name). Sorted by createdAt desc |
+| 3.9 | Build `GET /api/inventory/low-stock` | Query with `$expr: { $lte: ['$stock', '$lowStockLimit'] }`. Sort by stock/limit ratio ascending. Include name, code, stock, lowStockLimit |
+| 3.10 | Wire up inventory routes | `inventory.routes.js` — all behind `auth`. `GET /` + `GET /:productId` + `/history` + `/low-stock`: `rbac('inventory.read')`. `POST /stock-in` + `/stock-out`: `rbac('inventory.create')`. `POST /adjust`: `rbac('inventory.update')`. Register in `app.js` |
 
-### Backend Testing
+### Backend Validators (inventory.validator.js)
+
+| Validator | Key Fields |
+|---|---|
+| `stockInSchema` | `productId` (required ObjectId), `quantity` (required, int > 0), `reason` (required, 1-200 chars) |
+| `stockOutSchema` | Same, `reason` enum: `damaged`, `expired`, `stolen`, `returned`, `other` |
+| `adjustSchema` | `productId` (required), `quantity` (required, int ≥ 0), `reason` (required) |
+| `historyQuerySchema` | `product` (optional ObjectId), `type` (optional enum), `dateFrom`/`dateTo` (optional ISO), `page`, `limit` |
+
+### Backend Tests
 
 | # | Test | What to Cover |
 |---|---|---|
-| T3.1 | Stock in | Correct increment, transaction log created, product stock field updated |
-| T3.2 | Stock out | Correct decrement, insufficient stock → 409, negative quantity rejected |
-| T3.3 | Stock adjust | Exact quantity set, logged, only Super Admin can execute |
-| T3.4 | Stock history | Paginated, filterable, correct transaction type |
-| T3.5 | Low stock | Returns only products below threshold, sorted ascending |
-| T3.6 | Concurrent transactions | Two simultaneous stock-out requests don't cause negative stock |
+| T3.1 | Stock in | Correct increment (5→+3=8), transaction logged with correct previous/new, missing qty → 400 |
+| T3.2 | Stock out | Correct decrement (10→-3=7), insufficient stock → 409, negative qty rejected |
+| T3.3 | Stock adjust | Exact set (5→20), logged, non-admin → 403 |
+| T3.4 | Stock history | Paginated, filter by type/product/date, correct values |
+| T3.5 | Low stock | Only `stock <= lowStockLimit`, sorted by urgency, empty when none |
+| T3.6 | Concurrent stock-out | Two simultaneous requests with insufficient combined stock → only one succeeds (atomic `$gte` guard) |
+| T3.7 | Auth + RBAC | Unauthenticated → 401, billing staff → 403 on stock-in, customer → 403 on any |
 
 ### Frontend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 3.10 | Create InventoryPage | Stock overview table: product name/code, current stock, lowStockLimit, status badge (ok/low/out) |
-| 3.11 | Create StockInForm (modal) | Product select (searchable), quantity input, reason text field |
-| 3.12 | Create StockOutForm (modal) | Same pattern, reason dropdown (damaged, expired, stolen, other) |
-| 3.13 | Create StockAdjustForm (modal) | Exact quantity input, reason required, visible only to Super Admin |
-| 3.14 | Create InventoryHistory page | DataTable: product, type badge (color-coded), quantity (+green/-red), previous → new, reason, user, date |
-| 3.15 | Create LowStockAlerts widget | Dashboard card with count + link to filter, color-coded severity |
-| 3.16 | Create inventory API module | `api/inventory.api.js` — getStock, stockIn, stockOut, adjust, getHistory, getLowStock |
+| 3.11 | Create inventory API module | `api/inventory.api.js` — `getAll`, `getById`, `stockIn`, `stockOut`, `adjust`, `getHistory`, `getLowStock`. Follow `product.api.js` pattern |
+| 3.12 | Create InventoryPage | `pages/admin/inventory/InventoryPage.jsx` — DataTable: product name, code, stock, lowStockLimit, status badge (green/≥ok, yellow/low, red/out). Toolbar: Stock In / Stock Out buttons. Adjust button shown only for super_admin |
+| 3.13 | Create StockInForm | `components/inventory/StockInForm.jsx` — Dialog: product searchable select, quantity input (min 1), reason text field. `useMutation` → `inventoryApi.stockIn`. Toast + table refresh on success |
+| 3.14 | Create StockOutForm | `components/inventory/StockOutForm.jsx` — Same layout, reason = select dropdown (damaged/expired/stolen/returned/other), shows current stock reference |
+| 3.15 | Create StockAdjustForm | `components/inventory/StockAdjustForm.jsx` — Exact qty input (not delta), shows current stock, reason required. Conditionally rendered for super_admin only |
+| 3.16 | Create InventoryHistory page | `pages/admin/inventory/InventoryHistory.jsx` — DataTable: product, type badge (green=in/red=out/blue=adjust), qty (+/- prefix), previous→new, reason, user, date. Filters: product search, type dropdown, date range. Paginated |
+| 3.17 | Create LowStockAlerts widget | `components/inventory/LowStockAlerts.jsx` — Card with count, color by severity (1-3=red, 4-7=yellow, 8+=orange), click → navigates to inventory page. React Query with 60s refetchInterval |
+| 3.18 | Add Inventory nav to AdminLayout | New nav group "Inventory" in sidebar, roles: `['super_admin', 'ecommerce_staff']`, items: Overview → `/admin/inventory`, History → `/admin/inventory/history`. Low-stock badge count on nav item |
+| 3.19 | Add routes to AppRoutes | Lazy load InventoryPage, InventoryHistory. Routes: `/admin/inventory`, `/admin/inventory/history` |
 
-### Frontend Testing
+### Frontend Tests
 
 | # | Test | What to Cover |
 |---|---|---|
-| T3.7 | StockInForm | Submits with valid data, shows error on missing quantity, success toast |
-| T3.8 | InventoryHistory | Renders transactions, filter by type works, pagination |
-| T3.9 | StockAdjustForm | Only visible to Super Admin, requires reason, updates table after submit |
+| T3.8 | StockInForm | Renders product select, submits, shows error on missing qty, success toast |
+| T3.9 | StockOutForm | Reason dropdown renders options, insufficient stock shows error |
+| T3.10 | StockAdjustForm | Only for super_admin, requires reason, updates table |
+| T3.11 | InventoryHistory | Renders transactions, type filter works, pagination |
+| T3.12 | LowStockAlerts | Count displayed, color-coded, click navigates |
+| T3.13 | Inventory API module | All methods call correct endpoints with correct HTTP methods |
+
+### Edge Cases
+
+| Scenario | Behavior |
+|---|---|
+| Stock-out insufficient | Atomic `findOneAndUpdate` with `stock: { $gte: qty }` → null → 409 |
+| Non-existent product | 404 `NOT_FOUND` |
+| Quantity = 0 | Validator rejects (min 1) |
+| Adjust to same current value | Still logs transaction (no-op audit trail) |
+| Concurrent stock-out race | MongoDB atomic `$inc` with conditional guard prevents negative |
+| Deleted product | Stock operations still allowed; history shows populated snapshot or "[Deleted]" |
 
 ---
 
@@ -846,7 +875,7 @@
 |---|---|---|---|---|---|
 | ✅ 1 | Auth + Roles | 18 | 8 | 16 | 6 | 3–5 |
 | ✅ 2 | Product Management | 12 | 9 | 12 | 6 | 4–6 |
-| 3 | Inventory Management | 9 | 6 | 7 | 3 | 3–4 |
+| ✅ 3 | Inventory Management | 9 | 6 | 7 | 3 | 3–4 |
 | 4 | Homepage CMS | 7 | 4 | 4 | 2 | 2–3 |
 | 5 | Customer Website | 2 | 2 | 5 | 3 | 4–5 |
 | 6 | Cart & Checkout | 6 | 5 | 7 | 4 | 3–4 |

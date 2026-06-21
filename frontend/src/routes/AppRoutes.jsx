@@ -18,6 +18,9 @@ const BrandList = lazy(() => import('@/pages/admin/products/BrandList'));
 const ProductList = lazy(() => import('@/pages/admin/products/ProductList'));
 const ProductForm = lazy(() => import('@/pages/admin/products/ProductForm'));
 
+const InventoryPage = lazy(() => import('@/pages/admin/inventory/InventoryPage'));
+const InventoryHistory = lazy(() => import('@/pages/admin/inventory/InventoryHistory'));
+
 const PageLoader = () => (
   <div className="p-6 space-y-4">
     <Skeleton className="h-8 w-64" />
@@ -66,6 +69,8 @@ function AppRoutes() {
             <Route path="admin/products/:id/edit" element={<ProductForm />} />
             <Route path="admin/categories" element={<CategoryList />} />
             <Route path="admin/brands" element={<BrandList />} />
+            <Route path="admin/inventory" element={<InventoryPage />} />
+            <Route path="admin/inventory/history" element={<InventoryHistory />} />
           </Route>
         </Route>
 

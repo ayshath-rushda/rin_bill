@@ -36,6 +36,10 @@ const errorHandler = (err, _req, res, _next) => {
     message = 'Invalid or expired token';
   }
 
+  if (err.details) {
+    details = err.details;
+  }
+
   if (!err.isOperational) {
     console.error('Unhandled error:', err);
   }

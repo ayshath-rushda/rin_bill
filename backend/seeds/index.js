@@ -31,6 +31,7 @@ const defaultRoles = [
       'brand.*',
       'inventory.read',
       'inventory.create',
+      'inventory.update',
       'order.read',
       'order.updateStatus',
       'order.assignCourier',
@@ -101,6 +102,25 @@ const seed = async () => {
       console.log('Super admin created: admin@rinbill.com / Admin@123');
     } else {
       console.log('Super admin already exists');
+    }
+
+    console.log('Seeding staff users...');
+    const billingRole = await Role.findOne({ name: 'billing_staff' });
+    const ecomRole = await Role.findOne({ name: 'ecommerce_staff' });
+
+    const staffUsers = [
+      { name: 'Billing Staff', email: 'billing@rinbill.com', role: billingRole._id },
+      { name: 'Ecommerce Staff', email: 'ecom@rinbill.com', role: ecomRole._id },
+    ];
+
+    for (const staff of staffUsers) {
+      const existing = await User.findOne({ email: staff.email });
+      if (!existing) {
+        await User.create({ ...staff, password: 'password123', isVerified: true });
+        console.log(`Created: ${staff.email} / password123`);
+      } else {
+        console.log(`${staff.email} already exists`);
+      }
     }
 
     console.log('Seed complete!');

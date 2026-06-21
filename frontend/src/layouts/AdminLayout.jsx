@@ -15,6 +15,7 @@ import {
   LogOut,
   User,
   ChevronDown,
+  PackageSearch,
 } from 'lucide-react';
 import { logout } from '@/features/auth/authSlice';
 import { toggleSidebar } from '@/features/ui/uiSlice';
@@ -45,6 +46,14 @@ const navGroups = [
       { to: '/admin/products', icon: Package, label: 'All Products' },
       { to: '/admin/categories', icon: Package, label: 'Categories' },
       { to: '/admin/brands', icon: Package, label: 'Brands' },
+    ],
+  },
+  {
+    label: 'Inventory',
+    roles: ['super_admin', 'ecommerce_staff'],
+    items: [
+      { to: '/admin/inventory', icon: PackageSearch, label: 'Overview' },
+      { to: '/admin/inventory/history', icon: PackageSearch, label: 'History' },
     ],
   },
   {
