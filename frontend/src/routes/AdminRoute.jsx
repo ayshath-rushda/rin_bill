@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
@@ -6,6 +7,12 @@ const STAFF_ROLES = ['super_admin', 'ecommerce_staff', 'billing_staff'];
 
 function AdminRoute() {
   const { isAuthenticated, isLoading, user } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && user?.role?.name && !STAFF_ROLES.includes(user.role.name)) {
+      toast.error('You do not have permission to access this area');
+    }
+  }, [isLoading, isAuthenticated, user]);
 
   if (isLoading) {
     return (
@@ -21,7 +28,6 @@ function AdminRoute() {
 
   const roleName = user?.role?.name;
   if (!STAFF_ROLES.includes(roleName)) {
-    toast.error('You do not have permission to access this area');
     return <Navigate to="/" replace />;
   }
 

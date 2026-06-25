@@ -16,6 +16,8 @@ import {
   User,
   ChevronDown,
   PackageSearch,
+  PanelTop,
+  Star,
 } from 'lucide-react';
 import { logout } from '@/features/auth/authSlice';
 import { toggleSidebar } from '@/features/ui/uiSlice';
@@ -52,7 +54,7 @@ const navGroups = [
     label: 'Inventory',
     roles: ['super_admin', 'ecommerce_staff'],
     items: [
-      { to: '/admin/inventory', icon: PackageSearch, label: 'Overview' },
+      { to: '/admin/inventory', icon: PackageSearch, label: 'Overview', end: true },
       { to: '/admin/inventory/history', icon: PackageSearch, label: 'History' },
     ],
   },
@@ -74,7 +76,7 @@ const navGroups = [
     label: 'Billing',
     roles: ['super_admin', 'billing_staff'],
     items: [
-      { to: '/admin/billing', icon: Receipt, label: 'POS Billing' },
+      { to: '/admin/billing', icon: Receipt, label: 'POS Billing', end: true },
       { to: '/admin/billing/invoices', icon: Receipt, label: 'Invoices' },
     ],
   },
@@ -83,6 +85,8 @@ const navGroups = [
     roles: ['super_admin', 'ecommerce_staff'],
     items: [
       { to: '/admin/cms/sliders', icon: Image, label: 'Sliders' },
+      { to: '/admin/cms/banners', icon: PanelTop, label: 'Banners' },
+      { to: '/admin/cms/featured-products', icon: Star, label: 'Featured' },
     ],
   },
   {

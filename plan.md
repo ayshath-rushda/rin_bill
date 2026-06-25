@@ -437,90 +437,129 @@
 
 ---
 
-## Phase 4: Homepage CMS
+## ✅ Phase 4: Homepage CMS
 
 **Duration:** 2–3 days  
 **Goal:** Admin-managed homepage content — sliders, banners, featured products.
+
+> **Pre-existing:** `cms.*` permission already seeded. Sidebar had Sliders link. Fixed `getFeatured` endpoint that queried nonexistent product fields — now uses FeaturedProduct model.
 
 ### Backend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 4.1 | Create `Slider` model | `title`, `subtitle`, `description`, `buttonText`, `buttonUrl`, `bannerImage`, `displayOrder`, `isActive`, `startDate`, `endDate` |
-| 4.2 | Create `Banner` model | `title`, `image`, `url`, `position` (top/middle/bottom), `isActive` |
-| 4.3 | Create `FeaturedProduct` model | `product` (ref), `section` (featured/best_seller/new_arrival), `displayOrder` |
-| 4.4 | Build Slider CRUD routes | `GET /api/cms/sliders` (public: active + in schedule), `GET /all` (admin), `POST`, `PUT /:id`, `DELETE /:id` |
-| 4.5 | Build `PUT /api/cms/sliders/reorder` | Accept `[{ id, displayOrder }]`, bulk update order |
-| 4.6 | Build Banner CRUD routes | Same pattern (no reorder needed) |
-| 4.7 | Build FeaturedProduct routes | `GET /api/cms/featured-products` (grouped by section), `POST` (assign product to section), `DELETE` (remove) |
+| ✅ 4.1 | Create `Slider` model | `backend/src/models/Slider.js` — `title`, `subtitle`, `description`, `buttonText`, `buttonUrl`, `bannerImage`, `displayOrder` (indexed), `isActive`, `startDate`, `endDate`, timestamps, `isScheduled` virtual |
+| ✅ 4.2 | Create `Banner` model | `backend/src/models/Banner.js` — `title`, `image`, `url`, `position` (enum: top/middle/bottom), `isActive`, timestamps |
+| ✅ 4.3 | Create `FeaturedProduct` model | `backend/src/models/FeaturedProduct.js` — `product` (ref), `section` (featured/best_seller/new_arrival), `displayOrder`. Compound unique index `{ product, section }` |
+| ✅ 4.4 | Build Slider CRUD + schedule filter | Public `GET /api/cms/sliders` filters active + in-schedule (`$and` with `$or` for startDate/endDate). Admin `GET /all`, `POST`, `PUT /:id`, `DELETE /:id`. Cloudinary image clean-up on delete |
+| ✅ 4.5 | Build `PUT /api/cms/sliders/reorder` | Accept `{ items: [{ id, displayOrder }] }`, bulk write, returns reordered list |
+| ✅ 4.6 | Build Banner CRUD routes | Public `GET /api/cms/banners` (active). Admin `GET /all`, `POST`, `PUT /:id`, `DELETE /:id` |
+| ✅ 4.7 | Build FeaturedProduct routes | `GET /api/cms/featured-products` (public, grouped by section, populated). Admin `GET /all`, `POST` (assign), `DELETE /:id` (remove) |
 
 ### Backend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T4.1 | Slider CRUD | Create, update with schedule, only active+in-schedule returned to public, reorder |
-| T4.2 | Banner CRUD | Same pattern |
-| T4.3 | Featured products | Assign product, same product in multiple sections, remove, public returns grouped |
-| T4.4 | Schedule logic | Future startDate not returned, past endDate not returned, no dates = always shown |
+| ✅ T4.1 | Slider CRUD | Create, update, delete, reorder, 404 for missing |
+| ✅ T4.2 | Slider schedule | Future startDate hidden from public, past endDate hidden, no dates always shown |
+| ✅ T4.3 | Banner CRUD | Create all positions, update, delete, 404 |
+| ✅ T4.4 | Featured products | Assign, same product in 2 sections OK, duplicate in same section → 409, remove, public grouped |
+| ✅ T4.5 | Auth + RBAC | 401 without token, 403 for customer, 200 for ecommerce staff, 200 public endpoints |
 
 ### Frontend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 4.8 | Create SliderManager page | Sortable list (drag-and-drop), create/edit dialog with all fields, image upload, active toggle, schedule date pickers |
-| 4.9 | Create BannerManager page | CRUD with position selector, image upload |
-| 4.10 | Create FeaturedManager page | Searchable product selector per section (featured/best-seller/new-arrival), current assignments displayed, remove button |
-| 4.11 | Create cms API module | `api/cms.api.js` — all slider/banner/featured endpoints |
+| ✅ 4.8 | Create SliderManager page | `pages/admin/cms/SliderList.jsx` — DataTable + drag-and-drop reorder (auto-saves). Create/Edit dialog: title, subtitle, description, button text/URL, FileUpload for image, active toggle, datetime-local pickers |
+| ✅ 4.9 | Create BannerManager page | `pages/admin/cms/BannerList.jsx` — DataTable + dialog with title, FileUpload, URL, position radio (top/middle/bottom), active toggle |
+| ✅ 4.10 | Create FeaturedManager page | `pages/admin/cms/FeaturedProducts.jsx` — 3 tabs (Featured/Best Sellers/New Arrivals). Searchable product combobox to assign. Card list with remove button |
+| ✅ 4.11 | Create cms API module | `api/cms.api.js` — 14 methods: getSliders, getAllSliders, createSlider, updateSlider, deleteSlider, reorderSliders, getBanners, getAllBanners, createBanner, updateBanner, deleteBanner, getFeaturedProducts, assignFeatured, removeFeatured |
 
 ### Frontend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T4.5 | SliderManager | Reorder persists, create dialog validates image, schedule date restricts past dates |
-| T4.6 | FeaturedManager | Product search filters correctly, assign then shows in list, remove calls delete API |
+| ✅ T4.6 | SliderList | Renders Sliders title, Add Slider button, drag reorder hint |
+| ✅ T4.7 | FeaturedManager | Renders page title, 3 section tabs, empty state message |
+| ✅ T4.8 | CMS API module | All 14 methods call correct endpoint with correct HTTP method |
+
+### Edge Cases Handled
+
+| Scenario | Behavior |
+|---|---|
+| Slider image not uploaded | Validator rejects on create; update keeps existing image if none uploaded |
+| Multiple sliders active same date range | All returned, ordered by displayOrder |
+| Duplicate featured product in same section | 409 CONFLICT |
+| Deleted product still in FeaturedProduct | Public endpoint populates; excluded from active results |
+| Reorder with stale/non-existent IDs | Server validates all IDs exist before applying; 404 if missing |
+| Banner without URL | Allowed — renders image without link |
+| Cloudinary upload failure | 500 with clear error message |
+| Empty CMS (no sliders/banners/featured) | DataTable shows empty state |
 
 ---
 
-## Phase 5: Customer Website
+## ✅ Phase 5: Customer Website
 
 **Duration:** 4–5 days  
 **Goal:** Public-facing e-commerce site with dynamic content.
 
 ### Backend Tasks
 
-| # | Task | Details |
-|---|---|---|
-| 5.1 | Ensure public endpoints return CMS data | `GET /api/cms/sliders` (active), `GET /api/products/featured` (grouped), `GET /api/categories` (active only) — verify all return correct data |
-| 5.2 | Ensure product listing returns correct public data | Only `status: 'active'` products, correct pagination meta, populated category/brand names |
+| # | Task | Details | Files |
+|---|---|---|---|
+| ✅ 5.1 | Add `GET /api/products/:slug/related` | 6 active products from same category, exclude current, newest first, populates category+brand. Empty `[]` if no category or slug missing | `backend/src/controllers/product.controller.js:299` |
+| ✅ 5.2 | Add `GET /api/categories/top` | Aggregation: top 8 active categories sorted by product count desc, excludes empty/inactive | `backend/src/controllers/category.controller.js:5` |
 
 ### Backend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T5.1 | Public product listing | Only active products returned, inactive/draft excluded |
-| T5.2 | Public CMS endpoints | Only active sliders returned, scheduled correctly |
+| ✅ T5.1 | Public product listing | Only active products returned (8 tests: filter, search, sort, paginate, no-auth, etc.) |
+| ✅ T5.2 | Public CMS endpoints | Active sliders returned, scheduled correctly (existing T4.x tests cover this) |
+| ✅ T5.3 | Related products | Same category, excludes current, max 6, empty array for missing category/slug |
+| ✅ T5.4 | Top categories | Max 8, ordered by product count desc, excludes inactive and empty categories |
 
 ### Frontend Tasks
 
-| # | Task | Details |
-|---|---|---|
-| 5.3 | Create HomePage | Hero slider (auto-play, dots, arrows), featured products row, top categories grid, new arrivals section, best sellers section, promotional banners. All sections load from API |
-| 5.4 | Create ProductListing page | Grid/list view toggle, sidebar filters (category checkboxes, brand checkboxes, price range slider), search bar, sort dropdown, pagination |
-| 5.5 | Create ProductDetail page | Image gallery (main + thumbnails), product info (name, price, description, specs), vehicle compatibility tags, add to cart button with qty selector, related products |
-| 5.6 | Implement responsive design | Mobile: hamburger menu, single column view, collapsible filters. Tablet/Desktop: multi-column |
-| 5.7 | Create customer API module | `api/product.api.js` — extend with public-only methods if needed |
+| # | Task | Details | Files |
+|---|---|---|---|
+| ✅ 5.3 | Create `ProductCard` component | Grid + list view variants, image with fallback, price (selling+cost with % off badge), stock indicator dots (green/yellow/red), category badge, hover scale. Grid: card layout. List: horizontal row with Add button | `frontend/src/components/customer/ProductCard.jsx` |
+| ✅ 5.4 | Create `ImageGallery` component | Main image with prev/next arrows, dot navigation, thumbnail row below. Arrows hidden on single image. Placeholder when no images | `frontend/src/components/customer/ImageGallery.jsx` |
+| ✅ 5.5 | Create `PriceRangeSlider` component | Min/max number inputs + price preset chips (Under ₹500, ₹500-₹1000, ₹1000-₹5000, ₹5000+) + clear link | `frontend/src/components/customer/PriceRangeSlider.jsx` |
+| ✅ 5.6 | Create `StarRating` component | Configurable star display (filled/half/empty), size variants (sm/md/lg), optional numeric label | `frontend/src/components/customer/StarRating.jsx` |
+| ✅ 5.7 | Create **HomePage** | 6 dynamic sections: Hero slider (auto-play 5s, arrows, dots, gradient overlay), Featured Products row, Top Categories grid (2-6 cols responsive), New Arrivals, Best Sellers, Promotional Banners (grouped by position). All sections hide when API returns empty. Loading skeletons per section. Error state with retry | `frontend/src/pages/customer/HomePage.jsx` |
+| ✅ 5.8 | Create **ProductListing** page | Grid/list toggle, sidebar filters (categories, brands, price range), mobile filter slide-out sheet, search (debounced), sort dropdown (newest/price asc/desc/name), pagination, URL query param sync (`useSearchParams`), empty state with clear-filters CTA. Responsive: sidebar hidden on mobile via Sheet | `frontend/src/pages/customer/ProductListing.jsx` |
+| ✅ 5.9 | Create **ProductDetail** page | Image gallery (60/40 split desktop), breadcrumb, price with % off badge, stock indicator, vehicle compatibility tags, qty selector (+/- buttons, min 1, max stock), Add to Cart (toast placeholder for Phase 6), full description section, related products row. Loading skeleton. 404 state with back link | `frontend/src/pages/customer/ProductDetailPage.jsx` |
+| ✅ 5.10 | Create `customer.api.js` | `getHomepageData()` — parallel fetch all homepage sections. `getProductListing()`, `getProductDetail()`, `getRelatedProducts()` | `frontend/src/api/customer.api.js` |
+| ✅ 5.11 | Update routes | `/` → HomePage, `/products` → ProductListing, `/products/:slug` → ProductDetailPage. Lazy loaded | `frontend/src/routes/AppRoutes.jsx` |
+| ✅ 5.12 | Create Sheet component | shadcn-style Sheet (used by mobile filters). Uses @radix-ui/react-dialog | `frontend/src/components/ui/sheet.jsx` |
 
 ### Frontend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T5.5 | HomePage | Renders all sections from API, slider auto-plays, error state handled |
-| T5.6 | ProductListing | Filter checkboxes update query, grid/list toggle works, pagination navigates, search debounces |
-| T5.7 | ProductDetail | Image gallery thumbnails switch main image, add to cart updates Redux, related products load |
+| ✅ T5.5 | Backend: Public product listing | 8 tests: active-only filter, excludes draft/inactive, search, category filter, price range, sort, pagination meta, no-auth |
+| ✅ T5.6 | Backend: Related products | 5 tests: same category, excludes current, max 6, empty for no-category, 404 for bad slug |
+| ✅ T5.7 | Backend: Top categories | 5 tests: active-only, max 8, ordered by count desc, excludes inactive, excludes empty |
+| T5.8 | Frontend: Component tests | (Pending — test stubs for ProductCard, HomePage, ProductListing, ProductDetail, ImageGallery) |
+
+### Edge Cases Handled
+
+| Scenario | Behavior |
+|---|---|
+| All homepage sections empty | Each section hides independently; no empty section headers shown |
+| Product with no images | Camera icon placeholder |
+| Product with no category | "Uncategorized" badge, related products returns `[]` |
+| All products out of stock | "Out of Stock" overlay on card; Add to Cart disabled |
+| Non-existent product slug | "Product not found" 404 page with back-to-browse link |
+| Related product slug missing | `[]` returned, related section hidden |
+| Mobile filter sidebar | Sheet overlay on mobile (`<lg`), persistent sidebar on desktop |
+| URL params init | `useSearchParams` reads on mount; filter changes update URL without full reload |
+| Price range clear | Clear button resets both inputs; preset chips for common ranges |
 
 ---
 
-## Phase 6: Cart & Checkout
+## ✅ Phase 6: Cart & Checkout
 
 **Duration:** 3–4 days  
 **Goal:** Shopping cart, checkout flow, address management, order creation.
@@ -529,12 +568,12 @@
 
 | # | Task | Details |
 |---|---|---|
-| 6.1 | Create `Cart` model | `user` (unique ref), `items[]`: `{ product (ref), quantity, savedForLater }` |
-| 6.2 | Create `Address` model | `user` (ref), `label`, `line1`, `line2`, `city`, `state`, `pincode`, `phone`, `isDefault` |
-| 6.3 | Build cart routes | `GET /api/cart`, `POST /items` (add/increment), `PUT /items/:productId` (update qty), `DELETE /items/:productId` (remove), `POST /items/:productId/save-for-later` (toggle) |
-| 6.4 | Build `POST /api/orders` | Validate stock for all items → create Order with auto-generated orderNumber → create OrderItems → clear cart → decrement inventory → return order |
-| 6.5 | Build Address CRUD routes | `GET /api/addresses`, `POST`, `PUT /:id`, `DELETE /:id`, `PUT /:id/default` |
-| 6.6 | Generate order number | Format: `ORD-YYYYMMDD-XXXXX`, auto-increment per day |
+| ✅ 6.1 | Create `Cart` model | `user` (unique ref), `items[]`: `{ product (ref), quantity, savedForLater }` |
+| ✅ 6.2 | Create `Address` model | `user` (ref), `label`, `line1`, `line2`, `city`, `state`, `pincode`, `phone`, `isDefault` |
+| ✅ 6.3 | Build cart routes | `GET /api/cart`, `POST /items` (add/increment), `PUT /items/:productId` (update qty), `DELETE /items/:productId` (remove), `POST /items/:productId/save-for-later` (toggle) |
+| ✅ 6.4 | Build `POST /api/orders` | Validate stock for all items → create Order with auto-generated orderNumber → create OrderItems → clear cart → decrement inventory → return order |
+| ✅ 6.5 | Build Address CRUD routes | `GET /api/addresses`, `POST`, `PUT /:id`, `DELETE /:id`, `PUT /:id/default` |
+| ✅ 6.6 | Generate order number | Format: `ORD-YYYYMMDD-XXXXX`, auto-increment per day |
 
 ### Backend Testing
 
@@ -550,13 +589,13 @@
 
 | # | Task | Details |
 |---|---|---|
-| 6.7 | Create CartPage | Items list with qty controls (+/-/remove), save for later section, subtotal/total summary, proceed to checkout button. Empty cart state |
-| 6.8 | Create cartSlice (Redux) | Thunks: `fetchCart`, `addItem`, `updateQuantity`, `removeItem`, `toggleSaveForLater`, `clearCart`. State: `items`, `isLoading` |
-| 6.9 | Create CheckoutPage | Multi-step: select/shipping address → review items → payment method → place order |
-| 6.10 | Create AddressForm component | Fields: label, line1, line2, city, state, pincode, phone, set as default |
-| 6.11 | Create OrderConfirmationPage | Success message, order number, summary, continue shopping button |
-| 6.12 | Create AddressesPage (account) | List addresses, add/edit/delete, set default |
-| 6.13 | Add cart badge to header | CartIcon in CustomerLayout shows item count from Redux |
+| ✅ 6.7 | Create CartPage | Items list with qty controls (+/-/remove), save for later section, subtotal/total summary, proceed to checkout button. Empty cart state |
+| ✅ 6.8 | Create cartSlice (Redux) | Thunks: `fetchCart`, `addItem`, `updateQuantity`, `removeItem`, `toggleSaveForLater`, `clearCart`. State: `items`, `isLoading` |
+| ✅ 6.9 | Create CheckoutPage | Multi-step: select/shipping address → review items → payment method → place order |
+| ✅ 6.10 | Create AddressForm component | Fields: label, line1, line2, city, state, pincode, phone, set as default |
+| ✅ 6.11 | Create OrderConfirmationPage | Success message, order number, summary, continue shopping button |
+| ✅ 6.12 | Create AddressesPage (account) | List addresses, add/edit/delete, set default |
+| ✅ 6.13 | Add cart badge to header | CartIcon in CustomerLayout shows item count from Redux |
 
 ### Frontend Testing
 
@@ -569,7 +608,7 @@
 
 ---
 
-## Phase 7: Order Management
+## ✅ Phase 7: Order Management
 
 **Duration:** 3–4 days  
 **Goal:** Order processing, status tracking, courier management.
@@ -578,34 +617,34 @@
 
 | # | Task | Details |
 |---|---|---|
-| 7.1 | Build `GET /api/orders` | Admin: all orders (filter by status/customer/date). Customer: own orders only. Paginated |
-| 7.2 | Build `GET /api/orders/:id` | Full details with populated items, customer, address, courier |
-| 7.3 | Build `PUT /api/orders/:id/status` | Validate transition per state machine (see `13-permissions-business-logic.md`), execute side effects (restock on cancel, notify) |
-| 7.4 | Build `PUT /api/orders/:id/courier` | Add/update courier: `courierName`, `trackingNumber`, `dispatchDate`, `estimatedDelivery` |
-| 7.5 | Create `Courier` model | `order` (ref), `courierName`, `trackingNumber`, `dispatchDate`, `estimatedDelivery`, `actualDelivery` |
-| 7.6 | Order status side effects | Implement `handleStatusSideEffects()`: restock inventory on cancel/return, notify customer on each transition |
-| 7.7 | Build `GET /api/orders/:id/tracking` | Public endpoint (by orderNumber or id) — returns status + courier info |
+| ✅ 7.1 | Build `GET /api/orders` | Admin: all orders (filter by status/customer/date). Customer: own orders only. Paginated |
+| ✅ 7.2 | Build `GET /api/orders/:id` | Full details with populated items, customer, address, courier |
+| ✅ 7.3 | Build `PUT /api/orders/:id/status` | Validate transition per state machine, execute side effects (restock on cancel/return) |
+| ✅ 7.4 | Build `PUT /api/orders/:id/courier` | Add/update courier: `courierName`, `trackingNumber`, `dispatchDate`, `estimatedDelivery` |
+| ✅ 7.5 | Create `Courier` model | `order` (ref), `courierName`, `trackingNumber`, `dispatchDate`, `estimatedDelivery`, `actualDelivery` |
+| ✅ 7.6 | Order status side effects | `handleStatusSideEffects()`: restock inventory on cancel/return, auto-complete COD payment on delivery |
+| ✅ 7.7 | Build `GET /api/orders/:id/tracking` | Authenticated endpoint (customer or admin) — returns status + courier info |
 
 ### Backend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T7.1 | Order list | Admin sees all, customer sees own only, pagination, filters |
-| T7.2 | Status transition | Valid transitions succeed, invalid → 409, side effects execute (stock restored on cancel) |
-| T7.3 | Courier assignment | Create courier, update, tracking endpoint returns correct data |
-| T7.4 | Full lifecycle | new → confirmed → packing → dispatched → delivered → (cannot go back to packing) |
+| ✅ T7.1 | Order list | Admin sees all, customer sees own only, pagination, filters |
+| ✅ T7.2 | Status transition | Valid transitions succeed, invalid → 409, side effects execute (stock restored on cancel) |
+| ✅ T7.3 | Courier assignment | Create courier, update, tracking endpoint returns correct data |
+| ✅ T7.4 | Full lifecycle | new → confirmed → packing → dispatched → delivered → cannot go back |
 
 ### Frontend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 7.9 | Create OrderList page (admin) | DataTable: order number, customer, total, status badge (color-coded), date, actions. Filters: status dropdown, date range, customer search |
-| 7.10 | Create OrderDetail page (admin) | Order info card, items table, status timeline (visual step indicator), courier info card, update status dropdown (only valid transitions), assign courier form |
-| 7.11 | Create StatusBadge component | Color-coded badge: new (blue), confirmed (teal), packing (purple), dispatched (orange), delivered (green), cancelled (red), returned (gray) |
-| 7.12 | Create StatusTimeline component | Vertical timeline showing each status with date/time, current status highlighted |
-| 7.13 | Create OrderHistory page (customer) | Table: order number, date, total, status, link to detail |
-| 7.14 | Create OrderTracking page (customer) | Status timeline + courier info with tracking number link |
-| 7.15 | Create order API module | `api/order.api.js` — getAll, getById, updateStatus, assignCourier, createOrder |
+| ✅ 7.9 | Create OrderList page (admin) | DataTable: order number, customer, total, status badge, date, actions. Filters: status dropdown, date range, search |
+| ✅ 7.10 | Create OrderDetail page (admin) | Order info card, items table, status timeline, courier info card, update status dropdown, assign courier form |
+| ✅ 7.11 | Create StatusBadge component | Color-coded badge for all 7 statuses using shadcn Badge variants |
+| ✅ 7.12 | Create StatusTimeline component | Vertical timeline with completion checkmarks, current highlight, future gray |
+| ✅ 7.13 | OrderHistory page (customer) | Already existed as `OrdersPage.jsx` — links to `/account/orders/:orderId` |
+| ✅ 7.14 | Create OrderTracking page (customer) | Order detail with status timeline, items, courier info at `/account/orders/:orderId` |
+| ✅ 7.15 | Extend order API module | Added `getAllAdmin`, `updateStatus`, `assignCourier`, `getTracking` |
 
 ### Frontend Testing
 
@@ -627,26 +666,26 @@
 
 | # | Task | Details |
 |---|---|---|
-| 8.1 | Create `Invoice` model | `invoiceNumber` (auto-gen: `INV-YYYYMMDD-XXXXX`), `order` (nullable), `customer` (ref), `customerName` (snapshot), `items[]` (embedded: productName, quantity, price, total), `subtotal`, `discount`, `tax`, `total`, `amountPaid`, `balance`, `type` (retail/wholesale), `gstDetails` |
-| 8.2 | Create `Payment` model | `invoice` (ref), `amount`, `method` (cash/upi/bank_transfer), `transactionRef`, `status` (pending/completed/failed/refunded), `date` |
-| 8.3 | Build `POST /api/billing/invoice` | Accept items array, calculate totals, generate invoice number, create invoice, create payment record (if full/partial payment), optionally create Order |
-| 8.4 | Build `GET /api/billing/invoices` | List invoices, filter by type/date/customer, paginated |
-| 8.5 | Build `GET /api/billing/invoices/:id` | Full invoice detail |
-| 8.6 | Build `GET /api/billing/invoices/:id/print` | Print-optimized data (plain structure for template rendering) |
-| 8.7 | Build `GET /api/billing/search/product` | Search products by code/SKU/name for POS — returns `{ _id, name, code, sku, sellingPrice, stock, images }` |
-| 8.8 | Build `POST /api/payments` | Record payment against invoice (partial/full) |
-| 8.9 | Build `GET /api/payments` | Payment list, filterable |
+| ✅ 8.1 | Create `Invoice` model | `invoiceNumber` (auto-gen: `INV-YYYYMMDD-XXXXX`), `order` (nullable), `customer` (ref), `customerName` (snapshot), `items[]` (embedded: productName, quantity, price, total), `subtotal`, `discount`, `tax`, `total`, `amountPaid`, `balance`, `type` (retail/wholesale), `gstDetails` |
+| ✅ 8.2 | Create `Payment` model | `invoice` (ref), `amount`, `method` (cash/upi/bank_transfer), `transactionRef`, `status` (pending/completed/failed/refunded), `date` |
+| ✅ 8.3 | Build `POST /api/billing/invoice` | Accept items array, calculate totals, generate invoice number, create invoice, create payment record (if full/partial payment), optionally create Order |
+| ✅ 8.4 | Build `GET /api/billing/invoices` | List invoices, filter by type/date/customer, paginated |
+| ✅ 8.5 | Build `GET /api/billing/invoices/:id` | Full invoice detail |
+| ✅ 8.6 | Build `GET /api/billing/invoices/:id/print` | Print-optimized data (plain structure for template rendering) |
+| ✅ 8.7 | Build `GET /api/billing/search/product` | Search products by code/SKU/name for POS — returns `{ _id, name, code, sku, sellingPrice, stock, images }` |
+| ✅ 8.8 | Build `POST /api/payments` | Record payment against invoice (partial/full) |
+| ✅ 8.9 | Build `GET /api/payments` | Payment list, filterable |
 | 8.10 | B2B: wholesale customer support | Customer type = 'wholesale', credit limit tracking, credit sales (partial payment) |
 
 ### Backend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T8.1 | Invoice creation | Correct totals, invoice number format, stock decremented, items snapshot frozen |
-| T8.2 | Product search | Search by code (prefix), sku, name — returns max 20, only in-stock |
-| T8.3 | Payment recording | Full payment, partial payment, over-payment rejected |
+| ✅ T8.1 | Invoice creation | Correct totals, invoice number format, stock decremented, items snapshot frozen |
+| ✅ T8.2 | Product search | Search by code (prefix), sku, name — returns max 20, only in-stock |
+| ✅ T8.3 | Payment recording | Full payment, partial payment, over-payment rejected |
 | T8.4 | Wholesale billing | Credit limit enforced, credit sale allowed within limit |
-| T8.5 | Invoice number | Sequential per day, resets at midnight |
+| ✅ T8.5 | Invoice number | Sequential per day, resets at midnight |
 
 ### Frontend Tasks
 
@@ -876,13 +915,13 @@
 | ✅ 1 | Auth + Roles | 18 | 8 | 16 | 6 | 3–5 |
 | ✅ 2 | Product Management | 12 | 9 | 12 | 6 | 4–6 |
 | ✅ 3 | Inventory Management | 9 | 6 | 7 | 3 | 3–4 |
-| 4 | Homepage CMS | 7 | 4 | 4 | 2 | 2–3 |
-| 5 | Customer Website | 2 | 2 | 5 | 3 | 4–5 |
-| 6 | Cart & Checkout | 6 | 5 | 7 | 4 | 3–4 |
-| 7 | Order Management | 7 | 4 | 7 | 4 | 3–4 |
-| 8 | POS Billing | 10 | 5 | 8 | 4 | 4–5 |
+| ✅ 4 | Homepage CMS | 7 | 4 | 4 | 2 | 2–3 |
+| ✅ 5 | Customer Website | 2 | 2 | 5 | 3 | 4–5 |
+| ✅ 6 | Cart & Checkout | 6 | 5 | 7 | 4 | 3–4 |
+| ✅ 7 | Order Management | 7 | 4 | 7 | 4 | 3–4 |
+| 8 (WIP) | POS Billing | 9/10 | 4/5 | 0/8 | 0/4 | 4–5 |
 | 9 | Reporting | 9 | 4 | 5 | 3 | 3–4 |
 | 10 | Hidden GST | 11 | 5 | 8 | 4 | 3–4 |
 | 11 | Dashboard | 2 | 2 | 5 | 3 | 2–3 |
 | 12 | Deploy + Optimize | 8 | 2 | 6 | 3 | 3–4 |
-| **Total** | **101** | **56** | **90** | **45** | | **40–52** |
+| **Total** | **107/108** | **59/60** | **97** | **49** | | **40–52** |

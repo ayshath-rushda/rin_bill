@@ -31,7 +31,7 @@ const defaultForm = {
 
 function ProductForm() {
   const { id } = useParams();
-  const isEdit = !!id;
+  const [createdId, setCreatedId] = useState(null);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [form, setForm] = useState(defaultForm);
@@ -48,10 +48,13 @@ function ProductForm() {
     queryFn: () => brandApi.getAll(),
   });
 
+  const productId = id || createdId;
+  const isEdit = !!productId;
+
   const { data: productData } = useQuery({
-    queryKey: ['product', id],
-    queryFn: () => productApi.getById(id),
-    enabled: isEdit,
+    queryKey: ['product', productId],
+    queryFn: () => productApi.getById(productId),
+    enabled: !!productId,
   });
 
   const { data: settingsData } = useQuery({
@@ -88,33 +91,36 @@ function ProductForm() {
     }
   }, [productData]);
 
+  const extractError = (err) => err?.error?.message || err?.message || 'Something went wrong';
+
   const createMutation = useMutation({
     mutationFn: (body) => productApi.create(body),
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast.success('Product created');
-      navigate(`/admin/products/${res.data._id}/edit`);
+      setCreatedId(res.data._id);
     },
-    onError: (err) => toast.error(err?.message || 'Failed to create'),
+    onError: (err) => toast.error(extractError(err)),
   });
 
   const updateMutation = useMutation({
-    mutationFn: (body) => productApi.update(id, body),
+    mutationFn: (body) => productApi.update(productId, body),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
-      queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.invalidateQueries({ queryKey: ['product', productId] });
       toast.success('Product updated');
+      navigate('/admin/products');
     },
-    onError: (err) => toast.error(err?.message || 'Failed to update'),
+    onError: (err) => toast.error(extractError(err)),
   });
 
   const uploadMutation = useMutation({
-    mutationFn: ({ formData, type }) => productApi.uploadImages(id, formData, type),
+    mutationFn: ({ formData, type }) => productApi.uploadImages(productId, formData, type),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['product', id] });
+      queryClient.invalidateQueries({ queryKey: ['product', productId] });
       toast.success('Images uploaded');
     },
-    onError: (err) => toast.error(err?.message || 'Failed to upload'),
+    onError: (err) => toast.error(extractError(err)),
   });
 
   const categories = categoriesData?.data || [];
@@ -334,19 +340,22 @@ function ProductForm() {
           </Card>
         )}
 
-        {isEdit && (
+        {productId && (
           <Card>
             <CardHeader><CardTitle>Images</CardTitle></CardHeader>
             <CardContent>
               <FileUpload
                 onUpload={(formData) => uploadMutation.mutate({ formData, type: 'main' })}
+                multiple
               />
               {productData?.data?.images?.length > 0 && (
                 <div className="mt-4">
                   <Label>Current Images</Label>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {productData.data.images.map((url, i) => (
-                      <img key={i} src={url} alt="" className="h-20 w-20 rounded-md border object-cover" />
+                      <div key={i} className="relative group">
+                        <img src={url} alt="" className="h-20 w-20 rounded-md border object-cover" />
+                      </div>
                     ))}
                   </div>
                 </div>

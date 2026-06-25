@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import ErrorBoundary from '@/components/shared/ErrorBoundary';
 
 const AuthLayout = lazy(() => import('@/layouts/AuthLayout'));
 const AdminLayout = lazy(() => import('@/layouts/AdminLayout'));
@@ -8,10 +9,22 @@ const CustomerLayout = lazy(() => import('@/layouts/CustomerLayout'));
 const ProtectedRoute = lazy(() => import('@/routes/ProtectedRoute'));
 const AdminRoute = lazy(() => import('@/routes/AdminRoute'));
 
+const HomePage = lazy(() => import('@/pages/customer/HomePage'));
+const ProductListing = lazy(() => import('@/pages/customer/ProductListing'));
+const ProductDetailPage = lazy(() => import('@/pages/customer/ProductDetailPage'));
 const LoginPage = lazy(() => import('@/pages/customer/auth/LoginPage'));
 const RegisterPage = lazy(() => import('@/pages/customer/auth/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/pages/customer/auth/ForgotPasswordPage'));
 const ProfilePage = lazy(() => import('@/pages/customer/account/ProfilePage'));
+const CartPage = lazy(() => import('@/pages/customer/CartPage'));
+const CheckoutPage = lazy(() => import('@/pages/customer/CheckoutPage'));
+const OrderConfirmation = lazy(() => import('@/pages/customer/OrderConfirmation'));
+const AddressesPage = lazy(() => import('@/pages/customer/account/AddressesPage'));
+const OrdersPage = lazy(() => import('@/pages/customer/account/OrdersPage'));
+const OrderDetailPage = lazy(() => import('@/pages/customer/account/OrderDetailPage'));
+
+const OrderList = lazy(() => import('@/pages/admin/orders/OrderList'));
+const OrderDetail = lazy(() => import('@/pages/admin/orders/OrderDetail'));
 
 const CategoryList = lazy(() => import('@/pages/admin/products/CategoryList'));
 const BrandList = lazy(() => import('@/pages/admin/products/BrandList'));
@@ -20,6 +33,9 @@ const ProductForm = lazy(() => import('@/pages/admin/products/ProductForm'));
 
 const InventoryPage = lazy(() => import('@/pages/admin/inventory/InventoryPage'));
 const InventoryHistory = lazy(() => import('@/pages/admin/inventory/InventoryHistory'));
+const SliderList = lazy(() => import('@/pages/admin/cms/SliderList'));
+const BannerList = lazy(() => import('@/pages/admin/cms/BannerList'));
+const FeaturedProducts = lazy(() => import('@/pages/admin/cms/FeaturedProducts'));
 
 const PageLoader = () => (
   <div className="p-6 space-y-4">
@@ -43,8 +59,10 @@ function AppRoutes() {
       <Routes>
         {/* Customer Website */}
           <Route element={<CustomerLayout />}>
-          <Route index element={<div className="p-6"><h1 className="text-2xl font-bold">Home</h1><p className="text-muted-foreground">Welcome to RINBILL</p></div>} />
-          <Route path="products" element={<div className="p-6"><h1 className="text-2xl font-bold">Products</h1><p className="text-muted-foreground">Coming soon</p></div>} />
+          <Route index element={<HomePage />} />
+          <Route path="cart" element={<CartPage />} />
+          <Route path="products" element={<ProductListing />} />
+          <Route path="products/:slug" element={<ProductDetailPage />} />
 
           {/* Customer Auth Pages */}
           <Route element={<AuthLayout />}>
@@ -55,8 +73,12 @@ function AppRoutes() {
 
           {/* Customer Protected Pages */}
           <Route element={<ProtectedRoute />}>
+            <Route path="checkout" element={<ErrorBoundary><CheckoutPage /></ErrorBoundary>} />
+            <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />
             <Route path="account/profile" element={<ProfilePage />} />
-            <Route path="account/orders" element={<div className="p-6"><h1 className="text-2xl font-bold">My Orders</h1><p className="text-muted-foreground">Coming soon</p></div>} />
+            <Route path="account/orders" element={<OrdersPage />} />
+            <Route path="account/orders/:orderId" element={<OrderDetailPage />} />
+            <Route path="account/addresses" element={<AddressesPage />} />
           </Route>
         </Route>
 
@@ -71,6 +93,11 @@ function AppRoutes() {
             <Route path="admin/brands" element={<BrandList />} />
             <Route path="admin/inventory" element={<InventoryPage />} />
             <Route path="admin/inventory/history" element={<InventoryHistory />} />
+            <Route path="admin/cms/sliders" element={<SliderList />} />
+            <Route path="admin/cms/banners" element={<BannerList />} />
+            <Route path="admin/cms/featured-products" element={<FeaturedProducts />} />
+            <Route path="admin/orders" element={<OrderList />} />
+            <Route path="admin/orders/:id" element={<OrderDetail />} />
           </Route>
         </Route>
 

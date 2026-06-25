@@ -2,6 +2,34 @@ import Category from '../models/Category.js';
 import Product from '../models/Product.js';
 import AppError from '../utils/AppError.js';
 
+export const getTop = async (req, res, next) => {
+  try {
+    const categories = await Category.aggregate([
+      { $match: { isActive: true } },
+      {
+        $lookup: {
+          from: 'products',
+          localField: '_id',
+          foreignField: 'category',
+          as: 'products',
+        },
+      },
+      {
+        $addFields: {
+          productCount: { $size: '$products' },
+        },
+      },
+      { $match: { productCount: { $gt: 0 } } },
+      { $sort: { productCount: -1 } },
+      { $limit: 8 },
+      { $project: { products: 0 } },
+    ]);
+    res.json({ success: true, data: categories });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const getAllPublic = async (req, res, next) => {
   try {
     const categories = await Category.find({ isActive: true }).sort({ name: 1 });

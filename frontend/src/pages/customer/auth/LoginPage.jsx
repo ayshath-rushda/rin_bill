@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { login } from '@/features/auth/authSlice';
@@ -11,7 +11,18 @@ function LoginPage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { isLoading, error } = useSelector((state) => state.auth);
+  const { isLoading, error, isAuthenticated, user } = useSelector((state) => state.auth);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const redirect = searchParams.get('redirect');
+      const role = user?.role?.name;
+      if (redirect) navigate(redirect, { replace: true });
+      else if (role === 'super_admin' || role === 'ecommerce_staff' || role === 'billing_staff')
+        navigate('/admin', { replace: true });
+      else navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate, searchParams]);
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});

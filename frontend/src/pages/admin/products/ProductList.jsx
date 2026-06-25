@@ -10,12 +10,10 @@ import SearchInput from '@/components/shared/SearchInput';
 import Pagination from '@/components/shared/Pagination';
 import ConfirmDialog from '@/components/shared/ConfirmDialog';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-
-const statusVariant = {
-  active: 'default',
-  inactive: 'secondary',
-  draft: 'outline',
+const statusStyle = {
+  active: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100 border-green-300 dark:border-green-700',
+  inactive: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100 border-gray-300 dark:border-gray-600',
+  draft: 'bg-transparent text-muted-foreground border border-dashed',
 };
 
 function ProductList() {
@@ -67,6 +65,16 @@ function ProductList() {
   const brands = brandsData?.data || [];
 
   const columns = [
+    {
+      key: 'images',
+      label: 'Image',
+      render: (row) =>
+        row.images?.length ? (
+          <img src={row.images[0]} alt="" className="h-10 w-10 rounded object-cover" />
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded bg-muted text-xs text-muted-foreground">—</div>
+        ),
+    },
     { key: 'name', label: 'Name', sortable: true },
     { key: 'code', label: 'Code' },
     {
@@ -94,9 +102,9 @@ function ProductList() {
       key: 'status',
       label: 'Status',
       render: (row) => (
-        <Badge variant={statusVariant[row.status] || 'outline'}>
+        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium ${statusStyle[row.status] || statusStyle.draft}`}>
           {row.status}
-        </Badge>
+        </span>
       ),
     },
     {

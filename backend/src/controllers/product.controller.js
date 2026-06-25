@@ -1,8 +1,10 @@
 import Product from '../models/Product.js';
+import Category from '../models/Category.js';
+import FeaturedProduct from '../models/FeaturedProduct.js';
 import Setting from '../models/Setting.js';
 import AppError from '../utils/AppError.js';
 import paginate from '../utils/paginate.js';
-import { cloudinary } from '../config/cloudinary.js';
+import { cloudinary, useCloudinary } from '../config/upload.js';
 
 const generateProductCode = async () => {
   const lastProduct = await Product.findOne().sort({ createdAt: -1 }).select('code').lean();
@@ -25,6 +27,27 @@ const stripGstFields = (body) => {
   delete body.hsnCode;
   delete body.gstRate;
   return body;
+};
+
+const fixImageUrls = (data, req) => {
+  const fix = (url) => {
+    if (!url || url.startsWith('http://') || url.startsWith('https://')) return url;
+    const filename = url.replace(/^.*[/\\]/, '');
+    return `${req.protocol}://${req.get('host')}/uploads/${filename}`;
+  };
+  const process = (item) => {
+    if (!item) return;
+    if (item.images) item.images = item.images.map(fix);
+    if (item.galleryImages) item.galleryImages = item.galleryImages.map(fix);
+  };
+  if (Array.isArray(data)) {
+    data.forEach(process);
+  } else if (data?.docs) {
+    data.docs.forEach(process);
+  } else {
+    process(data);
+  }
+  return data;
 };
 
 const validateGstFields = (body) => {
@@ -100,7 +123,7 @@ export const list = async (req, res, next) => {
       populate: 'category brand',
     });
 
-    res.json({ success: true, data: result });
+    res.json({ success: true, data: fixImageUrls(result, req) });
   } catch (error) {
     next(error);
   }
@@ -108,25 +131,24 @@ export const list = async (req, res, next) => {
 
 export const getFeatured = async (req, res, next) => {
   try {
-    const featured = await Product.find({
-      status: 'active',
-      $or: [
-        { isFeatured: true },
-        { isBestSeller: true },
-        { isNewArrival: true },
-      ],
-    })
-      .populate('category brand')
-      .limit(20)
+    const featured = await FeaturedProduct.find()
+      .populate('product', 'name slug images sellingPrice status category brand')
+      .sort({ section: 1, displayOrder: 1 })
       .lean();
 
     const grouped = {
-      featured: featured.filter((p) => p.isFeatured),
-      bestSeller: featured.filter((p) => p.isBestSeller),
-      newArrival: featured.filter((p) => p.isNewArrival),
+      featured: [],
+      bestSeller: [],
+      newArrival: [],
     };
 
-    res.json({ success: true, data: grouped });
+    featured.forEach((fp) => {
+      if (fp.product && fp.product.status === 'active') {
+        grouped[fp.section]?.push(fp.product);
+      }
+    });
+
+    res.json({ success: true, data: fixImageUrls(grouped, req) });
   } catch (error) {
     next(error);
   }
@@ -155,7 +177,7 @@ export const getBySlug = async (req, res, next) => {
       delete product.gstRate;
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: fixImageUrls(product, req) });
   } catch (error) {
     next(error);
   }
@@ -177,7 +199,7 @@ export const getById = async (req, res, next) => {
       delete product.gstRate;
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: fixImageUrls(product, req) });
   } catch (error) {
     next(error);
   }
@@ -199,7 +221,7 @@ export const create = async (req, res, next) => {
     const product = await Product.create(req.body);
     const populated = await Product.findById(product._id).populate('category brand');
 
-    res.status(201).json({ success: true, data: populated });
+    res.status(201).json({ success: true, data: fixImageUrls(populated, req) });
   } catch (error) {
     next(error);
   }
@@ -225,10 +247,10 @@ export const update = async (req, res, next) => {
       const result = product.toObject();
       delete result.hsnCode;
       delete result.gstRate;
-      return res.json({ success: true, data: result });
+      return res.json({ success: true, data: fixImageUrls(result, req) });
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: fixImageUrls(product, req) });
   } catch (error) {
     next(error);
   }
@@ -246,7 +268,7 @@ export const remove = async (req, res, next) => {
       throw new AppError('Product not found', 404, 'NOT_FOUND');
     }
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: fixImageUrls(product, req) });
   } catch (error) {
     next(error);
   }
@@ -263,7 +285,9 @@ export const uploadImages = async (req, res, next) => {
       throw new AppError('No files uploaded', 400, 'NO_FILES');
     }
 
-    const urls = req.files.map((file) => file.path);
+    const urls = req.files.map((file) =>
+      useCloudinary ? file.path : `${req.protocol}://${req.get('host')}/uploads/${file.filename}`
+    );
     const target = req.body.type === 'gallery' ? 'galleryImages' : 'images';
 
     if (product[target].length + urls.length > 10) {
@@ -273,7 +297,31 @@ export const uploadImages = async (req, res, next) => {
     product[target].push(...urls);
     await product.save();
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: fixImageUrls(product, req) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getRelated = async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(slug);
+    const query = isObjectId ? { $or: [{ _id: slug }, { slug }] } : { slug };
+    const product = await Product.findOne(query).select('category').lean();
+    if (!product || !product.category) {
+      return res.json({ success: true, data: [] });
+    }
+    const related = await Product.find({
+      category: product.category,
+      _id: { $ne: isObjectId ? slug : product._id },
+      status: 'active',
+    })
+      .populate('category brand')
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean();
+    res.json({ success: true, data: fixImageUrls(related, req) });
   } catch (error) {
     next(error);
   }
@@ -294,14 +342,16 @@ export const deleteImage = async (req, res, next) => {
       throw new AppError('Image not found on this product', 404, 'IMAGE_NOT_FOUND');
     }
 
-    const publicId = imageUrl.split('/').pop().split('.')[0];
-    await cloudinary.uploader.destroy(`rinbill/${publicId}`);
+    if (useCloudinary) {
+      const publicId = imageUrl.split('/').pop().split('.')[0];
+      await cloudinary.uploader.destroy(`rinbill/${publicId}`).catch(() => {});
+    }
 
     product.images = product.images.filter((url) => !url.includes(imageId));
     product.galleryImages = product.galleryImages.filter((url) => !url.includes(imageId));
     await product.save();
 
-    res.json({ success: true, data: product });
+    res.json({ success: true, data: fixImageUrls(product, req) });
   } catch (error) {
     next(error);
   }

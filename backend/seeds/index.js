@@ -46,6 +46,8 @@ const defaultRoles = [
     name: 'customer',
     permissions: [
       'product.read',
+      'cart.*',
+      'address.*',
       'order.create',
       'order.read',
       'order.cancel',
@@ -71,7 +73,7 @@ const seed = async () => {
     for (const roleData of defaultRoles) {
       await Role.findOneAndUpdate(
         { name: roleData.name },
-        { $setOnInsert: roleData },
+        { $set: { permissions: roleData.permissions, description: roleData.description } },
         { upsert: true, new: true }
       );
     }

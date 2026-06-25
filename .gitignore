@@ -5,3 +5,5 @@ dist/
 .DS_Store
 coverage/
 .turbo/
+.opencode/
+backend/public/uploads/

@@ -103,12 +103,17 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload?.message || 'Registration failed';
       })
+      .addCase(refreshToken.pending, (state) => {
+        state.isLoading = true;
+      })
       .addCase(refreshToken.fulfilled, (state, action) => {
+        state.isLoading = false;
         state.user = action.payload.user;
         state.accessToken = action.payload.accessToken;
         state.isAuthenticated = true;
       })
       .addCase(refreshToken.rejected, (state) => {
+        state.isLoading = false;
         state.user = null;
         state.accessToken = null;
         state.isAuthenticated = false;

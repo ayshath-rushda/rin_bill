@@ -7,6 +7,7 @@ import * as categoryController from '../controllers/category.controller.js';
 
 const router = Router();
 
+router.get('/top', categoryController.getTop);
 router.get('/', categoryController.getAllPublic);
 router.get('/all', auth, rbac('category.*'), categoryController.getAll);
 router.get('/:slug', categoryController.getBySlug);

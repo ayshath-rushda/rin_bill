@@ -10,6 +10,9 @@ export const productApi = {
   getById: (id) =>
     api.get(`/products/${id}`),
 
+  getRelated: (slug) =>
+    api.get(`/products/${slug}/related`),
+
   getFeatured: () =>
     api.get('/products/featured'),
 

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { ShoppingCart, Menu, X, User, LogOut, Package } from 'lucide-react';
+import { fetchCart } from '@/features/cart/cartSlice';
 import { logout } from '@/features/auth/authSlice';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -17,7 +18,15 @@ function CustomerLayout() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user, isAuthenticated } = useSelector((state) => state.auth);
+  const cartItems = useSelector((state) => state.cart.items);
+  const cartCount = cartItems.filter((i) => !i.savedForLater).length;
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      dispatch(fetchCart());
+    }
+  }, [dispatch, isAuthenticated]);
 
   const initials = user?.name
     ?.split(' ')
@@ -61,6 +70,11 @@ function CustomerLayout() {
             <Link to="/cart">
               <Button variant="ghost" size="icon" className="relative">
                 <ShoppingCart className="size-5" />
+                {cartCount > 0 && (
+                  <span className="absolute -top-1 -right-1 size-5 rounded-full bg-primary text-primary-foreground text-xs font-bold flex items-center justify-center">
+                    {cartCount > 99 ? '99+' : cartCount}
+                  </span>
+                )}
               </Button>
             </Link>
 
