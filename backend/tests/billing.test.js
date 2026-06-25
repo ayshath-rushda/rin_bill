@@ -324,3 +324,106 @@ describe('T8.5 - Invoice number', () => {
     expect(n2).toBe(n1 + 1);
   });
 });
+
+describe('T8.4 - Wholesale billing', () => {
+  let wholesaleCustomer;
+  let wholesaleToken;
+
+  beforeAll(async () => {
+    const customerRole = await Role.findOne({ name: 'customer' });
+
+    const createRes = await request(app)
+      .post('/api/auth/register')
+      .send({
+        name: 'Wholesale Buyer',
+        email: `wholesale-${Date.now()}@test.com`,
+        password: 'password123',
+        confirmPassword: 'password123',
+      });
+    wholesaleToken = createRes.body.data?.accessToken;
+
+    wholesaleCustomer = await User.findOne({ email: createRes.body.data.user.email });
+    wholesaleCustomer.customerType = 'wholesale';
+    wholesaleCustomer.gstin = '27ABCDE1234F1Z5';
+    wholesaleCustomer.creditLimit = 5000;
+    wholesaleCustomer.creditUsed = 0;
+    await wholesaleCustomer.save();
+  });
+
+  it('should create wholesale invoice with credit sale', async () => {
+    const res = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${billingToken}`)
+      .send({
+        customerId: wholesaleCustomer._id.toString(),
+        items: [{ productId: product._id.toString(), quantity: 2 }],
+        paymentMethod: 'cash',
+        amountPaid: 500,
+        type: 'wholesale',
+      });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.type).toBe('wholesale');
+    expect(res.body.data.balance).toBeGreaterThan(0);
+    expect(res.body.data.paymentStatus).toBe('partial');
+
+    const updated = await User.findById(wholesaleCustomer._id).lean();
+    expect(updated.creditUsed).toBeGreaterThan(0);
+  });
+
+  it('should reject wholesale invoice exceeding credit limit', async () => {
+    const smallCredit = await User.create({
+      name: 'Small Credit Customer',
+      email: `smallcredit-${Date.now()}@test.com`,
+      password: 'password123',
+      role: wholesaleCustomer.role,
+      customerType: 'wholesale',
+      creditLimit: 100,
+      creditUsed: 0,
+      isVerified: true,
+    });
+    smallCredit.password = 'password123';
+    await smallCredit.save();
+
+    const res = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${billingToken}`)
+      .send({
+        customerId: smallCredit._id.toString(),
+        items: [{ productId: product._id.toString(), quantity: 2 }],
+        paymentMethod: 'cash',
+        amountPaid: 0,
+        type: 'wholesale',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error.code).toBe('CREDIT_LIMIT_EXCEEDED');
+  });
+
+  it('should search wholesale customers', async () => {
+    const res = await request(app)
+      .get(`/api/billing/search/customers?q=Wholesale&type=wholesale`)
+      .set('Authorization', `Bearer ${billingToken}`);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.length).toBeGreaterThan(0);
+    res.body.data.forEach((c) => {
+      expect(c.customerType).toBe('wholesale');
+    });
+  });
+
+  it('should reject retail invoice with wholesale customer type mismatch', async () => {
+    const res = await request(app)
+      .post('/api/billing/invoices')
+      .set('Authorization', `Bearer ${billingToken}`)
+      .send({
+        customerId: wholesaleCustomer._id.toString(),
+        items: [{ productId: product._id.toString(), quantity: 1 }],
+        paymentMethod: 'cash',
+        type: 'wholesale',
+        amountPaid: 1000,
+      });
+
+    expect(res.status).toBe(201);
+  });
+});

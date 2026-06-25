@@ -28,6 +28,25 @@ const userSchema = new mongoose.Schema(
       ref: 'Role',
       required: [true, 'Role is required'],
     },
+    customerType: {
+      type: String,
+      enum: ['retail', 'wholesale'],
+      default: 'retail',
+    },
+    gstin: {
+      type: String,
+      default: '',
+    },
+    creditLimit: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    creditUsed: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     phone: {
       type: String,
       default: '',

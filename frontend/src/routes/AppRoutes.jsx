@@ -26,6 +26,11 @@ const OrderDetailPage = lazy(() => import('@/pages/customer/account/OrderDetailP
 const OrderList = lazy(() => import('@/pages/admin/orders/OrderList'));
 const OrderDetail = lazy(() => import('@/pages/admin/orders/OrderDetail'));
 
+const POSBilling = lazy(() => import('@/pages/admin/billing/POSBilling'));
+const InvoiceList = lazy(() => import('@/pages/admin/billing/InvoiceList'));
+const InvoiceDetail = lazy(() => import('@/pages/admin/billing/InvoiceDetail'));
+const InvoicePrint = lazy(() => import('@/pages/admin/billing/InvoicePrint'));
+
 const CategoryList = lazy(() => import('@/pages/admin/products/CategoryList'));
 const BrandList = lazy(() => import('@/pages/admin/products/BrandList'));
 const ProductList = lazy(() => import('@/pages/admin/products/ProductList'));
@@ -33,6 +38,8 @@ const ProductForm = lazy(() => import('@/pages/admin/products/ProductForm'));
 
 const InventoryPage = lazy(() => import('@/pages/admin/inventory/InventoryPage'));
 const InventoryHistory = lazy(() => import('@/pages/admin/inventory/InventoryHistory'));
+
+const CustomerList = lazy(() => import('@/pages/admin/customers/CustomerList'));
 const SliderList = lazy(() => import('@/pages/admin/cms/SliderList'));
 const BannerList = lazy(() => import('@/pages/admin/cms/BannerList'));
 const FeaturedProducts = lazy(() => import('@/pages/admin/cms/FeaturedProducts'));
@@ -98,6 +105,11 @@ function AppRoutes() {
             <Route path="admin/cms/featured-products" element={<FeaturedProducts />} />
             <Route path="admin/orders" element={<OrderList />} />
             <Route path="admin/orders/:id" element={<OrderDetail />} />
+            <Route path="admin/billing" element={<POSBilling />} />
+            <Route path="admin/billing/invoices" element={<InvoiceList />} />
+            <Route path="admin/billing/invoices/:id" element={<InvoiceDetail />} />
+            <Route path="admin/billing/invoices/:id/print" element={<InvoicePrint />} />
+            <Route path="admin/customers" element={<CustomerList />} />
           </Route>
         </Route>
 

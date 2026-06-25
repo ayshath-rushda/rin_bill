@@ -675,7 +675,7 @@
 | ✅ 8.7 | Build `GET /api/billing/search/product` | Search products by code/SKU/name for POS — returns `{ _id, name, code, sku, sellingPrice, stock, images }` |
 | ✅ 8.8 | Build `POST /api/payments` | Record payment against invoice (partial/full) |
 | ✅ 8.9 | Build `GET /api/payments` | Payment list, filterable |
-| 8.10 | B2B: wholesale customer support | Customer type = 'wholesale', credit limit tracking, credit sales (partial payment) |
+| ✅ 8.10 | B2B: wholesale customer support | Customer type = 'wholesale', credit limit tracking, credit sales (partial payment) |
 
 ### Backend Testing
 
@@ -684,30 +684,30 @@
 | ✅ T8.1 | Invoice creation | Correct totals, invoice number format, stock decremented, items snapshot frozen |
 | ✅ T8.2 | Product search | Search by code (prefix), sku, name — returns max 20, only in-stock |
 | ✅ T8.3 | Payment recording | Full payment, partial payment, over-payment rejected |
-| T8.4 | Wholesale billing | Credit limit enforced, credit sale allowed within limit |
+| ✅ T8.4 | Wholesale billing | Credit limit enforced, credit sale allowed within limit |
 | ✅ T8.5 | Invoice number | Sequential per day, resets at midnight |
 
 ### Frontend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 8.11 | Create POSBilling page | Split layout: left = search panel, right = invoice cart. Top: retail/wholesale toggle |
-| 8.12 | Create POS search component | Auto-focus input, debounced search, product results list with code/name/price/stock, click to add |
-| 8.13 | Create POS invoice cart component | Cart table: item rows (name, qty, rate, total), quantity +/- buttons, remove button. Footer: subtotal, discount field, total |
-| 8.14 | Create PaymentDialog | Total displayed, amount paid input (defaults to total), method radio (Cash/UPI/Bank Transfer), transaction ref field (optional), balance display, complete button |
-| 8.15 | Create InvoicePrint page | Print-optimized layout: store header, customer info, item table, totals, payment info, footer. Trigger `window.print()` or `react-to-print` |
-| 8.16 | Create InvoiceList page | DataTable with invoice number, customer, date, total, status |
-| 8.17 | Create InvoiceDetail page | Full invoice view with print button |
-| 8.18 | Create billing API module | `api/billing.api.js` — createInvoice, list, getById, searchProducts, print |
+| ✅ 8.11 | Create POSBilling page | Split layout: left = search panel, right = invoice cart. Top: retail/wholesale toggle |
+| ✅ 8.12 | Create POS search component | Auto-focus input, debounced search, product results list with code/name/price/stock, click to add |
+| ✅ 8.13 | Create POS invoice cart component | Cart table: item rows (name, qty, rate, total), quantity +/- buttons, remove button. Footer: subtotal, discount field, total |
+| ✅ 8.14 | Create PaymentDialog | Total displayed, amount paid input (defaults to total), method radio (Cash/UPI/Bank Transfer), transaction ref field (optional), balance display, complete button |
+| ✅ 8.15 | Create InvoicePrint page | Print-optimized layout: store header, customer info, item table, totals, payment info, footer. Trigger `window.print()` or `react-to-print` |
+| ✅ 8.16 | Create InvoiceList page | DataTable with invoice number, customer, date, total, status |
+| ✅ 8.17 | Create InvoiceDetail page | Full invoice view with print button |
+| ✅ 8.18 | Create billing API module | `api/billing.api.js` — createInvoice, list, getById, searchProducts, print |
 
 ### Frontend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T8.6 | POSBilling | Search returns products, click adds to cart, qty controls work, totals calc correctly |
-| T8.7 | PaymentDialog | Amount defaults to total, balance calc for partial payment, method selection required |
-| T8.8 | InvoicePrint | Invoice layout renders correct fields |
-| T8.9 | InvoiceList | Lists invoices, filters work |
+| ✅ T8.6 | POSBilling | Search returns products, click adds to cart, qty controls work, totals calc correctly |
+| ✅ T8.7 | PaymentDialog | Amount defaults to total, balance calc for partial payment, method selection required |
+| ✅ T8.8 | InvoicePrint | Invoice layout renders correct fields |
+| ✅ T8.9 | InvoiceList | Lists invoices, filters work |
 
 ---
 
@@ -919,9 +919,9 @@
 | ✅ 5 | Customer Website | 2 | 2 | 5 | 3 | 4–5 |
 | ✅ 6 | Cart & Checkout | 6 | 5 | 7 | 4 | 3–4 |
 | ✅ 7 | Order Management | 7 | 4 | 7 | 4 | 3–4 |
-| 8 (WIP) | POS Billing | 9/10 | 4/5 | 0/8 | 0/4 | 4–5 |
+| ✅ 8 | POS Billing | 10/10 | 5/5 | 8/8 | 4/4 | 4–5 |
 | 9 | Reporting | 9 | 4 | 5 | 3 | 3–4 |
 | 10 | Hidden GST | 11 | 5 | 8 | 4 | 3–4 |
 | 11 | Dashboard | 2 | 2 | 5 | 3 | 2–3 |
 | 12 | Deploy + Optimize | 8 | 2 | 6 | 3 | 3–4 |
-| **Total** | **107/108** | **59/60** | **97** | **49** | | **40–52** |
+| **Total** | **118/118** | **69/69** | **105/105** | **53/53** | | **44–57** |

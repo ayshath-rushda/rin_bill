@@ -8,6 +8,7 @@ import * as billingController from '../controllers/billing.controller.js';
 const router = Router();
 
 router.get('/search/product', auth, rbac('billing.*'), billingController.searchProducts);
+router.get('/search/customers', auth, rbac('billing.*'), billingController.searchCustomers);
 router.post('/invoices', auth, rbac('billing.*'), validate(createInvoiceSchema), billingController.createInvoice);
 router.get('/invoices', auth, rbac('billing.*'), billingController.listInvoices);
 router.get('/invoices/:id/print', auth, rbac('billing.*'), billingController.printInvoice);

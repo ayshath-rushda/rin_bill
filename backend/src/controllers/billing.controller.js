@@ -1,5 +1,6 @@
 import Product from '../models/Product.js';
 import Invoice from '../models/Invoice.js';
+import User from '../models/User.js';
 import StockTransaction from '../models/StockTransaction.js';
 import AppError from '../utils/AppError.js';
 import paginate from '../utils/paginate.js';
@@ -34,6 +35,18 @@ export const searchProducts = async (req, res, next) => {
 export const createInvoice = async (req, res, next) => {
   try {
     const { customerId, customerSnapshot, items, discount, paymentMethod, amountPaid, type, notes } = req.body;
+    const invoiceType = type || 'retail';
+
+    let customer = null;
+    if (customerId) {
+      customer = await User.findById(customerId).lean();
+      if (!customer) {
+        throw new AppError('Customer not found', 404, 'CUSTOMER_NOT_FOUND');
+      }
+      if (invoiceType === 'wholesale' && customer.customerType !== 'wholesale') {
+        throw new AppError('Selected customer is not a wholesale customer', 400, 'NOT_WHOLESALE');
+      }
+    }
 
     const invoiceItems = [];
     let subtotal = 0;
@@ -75,6 +88,18 @@ export const createInvoice = async (req, res, next) => {
     const taxableValue = subtotal - discountAmount;
     const taxTotal = invoiceItems.reduce((sum, i) => sum + i.gstAmount, 0);
     const total = taxableValue + taxTotal;
+    const balance = total - (amountPaid || 0);
+
+    if (customer && invoiceType === 'wholesale' && customer.creditLimit > 0 && balance > 0) {
+      const availableCredit = customer.creditLimit - customer.creditUsed;
+      if (balance > availableCredit) {
+        throw new AppError(
+          `Credit limit exceeded. Available: ${availableCredit.toFixed(2)}, Required: ${balance.toFixed(2)}`,
+          400,
+          'CREDIT_LIMIT_EXCEEDED'
+        );
+      }
+    }
 
     const invoiceNumber = await generateInvoiceNumber();
 
@@ -88,8 +113,8 @@ export const createInvoice = async (req, res, next) => {
       taxTotal,
       total,
       amountPaid: amountPaid || 0,
-      balance: total - (amountPaid || 0),
-      type: type || 'retail',
+      balance,
+      type: invoiceType,
       paymentMethod,
       paymentStatus: !amountPaid || amountPaid >= total ? 'completed' : amountPaid > 0 ? 'partial' : 'pending',
       gstDetails: {
@@ -103,6 +128,10 @@ export const createInvoice = async (req, res, next) => {
       notes,
       createdBy: req.user._id,
     });
+
+    if (customerId && invoiceType === 'wholesale' && balance > 0) {
+      await User.findByIdAndUpdate(customerId, { $inc: { creditUsed: balance } });
+    }
 
     for (const item of invoiceItems) {
       await Product.findByIdAndUpdate(item.product, { $inc: { stock: -item.quantity } });
@@ -197,6 +226,40 @@ export const printInvoice = async (req, res, next) => {
         generatedAt: new Date().toISOString(),
       },
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const searchCustomers = async (req, res, next) => {
+  try {
+    const { q, type } = req.query;
+    if (!q || q.length < 1) {
+      return res.json({ success: true, data: [] });
+    }
+
+    const filter = {
+      role: { $ne: null },
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { email: { $regex: q, $options: 'i' } },
+        { phone: { $regex: q, $options: 'i' } },
+      ],
+    };
+
+    if (type === 'wholesale') {
+      filter.customerType = 'wholesale';
+    }
+
+    const customers = await User.find(filter)
+      .select('name email phone customerType gstin creditLimit creditUsed')
+      .populate('role', 'name')
+      .limit(20)
+      .lean();
+
+    const result = customers.filter((c) => c.role?.name === 'customer' || c.role?.name === 'wholesale');
+
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
