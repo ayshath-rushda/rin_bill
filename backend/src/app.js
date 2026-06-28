@@ -19,6 +19,7 @@ import addressRoutes from './routes/address.routes.js';
 import orderRoutes from './routes/order.routes.js';
 import billingRoutes from './routes/billing.routes.js';
 import paymentRoutes from './routes/payment.routes.js';
+import reportRoutes from './routes/report.routes.js';
 
 const app = express();
 
@@ -48,6 +49,7 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/reports', reportRoutes);
 
 app.use(errorHandler);
 

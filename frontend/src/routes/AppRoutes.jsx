@@ -40,6 +40,10 @@ const InventoryPage = lazy(() => import('@/pages/admin/inventory/InventoryPage')
 const InventoryHistory = lazy(() => import('@/pages/admin/inventory/InventoryHistory'));
 
 const CustomerList = lazy(() => import('@/pages/admin/customers/CustomerList'));
+const SalesReport = lazy(() => import('@/pages/admin/reports/SalesReport'));
+const InventoryReport = lazy(() => import('@/pages/admin/reports/InventoryReport'));
+const OrderReport = lazy(() => import('@/pages/admin/reports/OrderReport'));
+const CustomerReport = lazy(() => import('@/pages/admin/reports/CustomerReport'));
 const SliderList = lazy(() => import('@/pages/admin/cms/SliderList'));
 const BannerList = lazy(() => import('@/pages/admin/cms/BannerList'));
 const FeaturedProducts = lazy(() => import('@/pages/admin/cms/FeaturedProducts'));
@@ -109,6 +113,10 @@ function AppRoutes() {
             <Route path="admin/billing/invoices" element={<InvoiceList />} />
             <Route path="admin/billing/invoices/:id" element={<InvoiceDetail />} />
             <Route path="admin/billing/invoices/:id/print" element={<InvoicePrint />} />
+            <Route path="admin/reports/sales" element={<SalesReport />} />
+            <Route path="admin/reports/inventory" element={<InventoryReport />} />
+            <Route path="admin/reports/orders" element={<OrderReport />} />
+            <Route path="admin/reports/customers" element={<CustomerReport />} />
             <Route path="admin/customers" element={<CustomerList />} />
           </Route>
         </Route>

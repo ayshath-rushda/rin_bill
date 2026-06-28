@@ -94,6 +94,9 @@ const navGroups = [
     roles: ['super_admin', 'ecommerce_staff', 'billing_staff'],
     items: [
       { to: '/admin/reports/sales', icon: BarChart3, label: 'Sales Report' },
+      { to: '/admin/reports/inventory', icon: PackageSearch, label: 'Inventory Report' },
+      { to: '/admin/reports/orders', icon: ShoppingCart, label: 'Order Report' },
+      { to: '/admin/reports/customers', icon: Users, label: 'Customer Report' },
     ],
   },
   {

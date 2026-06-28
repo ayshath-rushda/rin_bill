@@ -17,6 +17,7 @@ const defaultRoles = [
       'billing.*',
       'customer.read',
       'customer.update',
+      'inventory.read',
       'report.sales',
       'report.orders',
       'dashboard.read',

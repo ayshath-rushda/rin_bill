@@ -711,7 +711,7 @@
 
 ---
 
-## Phase 9: Reporting & Analytics
+## ✅ Phase 9: Reporting & Analytics
 
 **Duration:** 3–4 days  
 **Goal:** Sales, inventory, order, and customer reports with export.
@@ -720,42 +720,42 @@
 
 | # | Task | Details |
 |---|---|---|
-| 9.1 | Build `GET /api/reports/sales` | Aggregation pipeline: group by period (daily/weekly/monthly/yearly). Return: `period`, `totalOrders`, `totalRevenue`, `averageOrderValue` |
-| 9.2 | Build `GET /api/reports/inventory/stock` | All products with stock levels, category, status |
-| 9.3 | Build `GET /api/reports/inventory/movement` | Stock transactions aggregated by product, filter by date/product/type |
-| 9.4 | Build `GET /api/reports/orders` | Group by status, count + total revenue per status, filter by date range |
-| 9.5 | Build `GET /api/reports/customers/top` | Top customers by total spend + total orders, `?limit=` param |
-| 9.6 | Build `GET /api/reports/customers/purchases` | Single customer purchase history with totals |
-| 9.7 | Build `GET /api/reports/export/sales?format=excel` | Generate Excel file using exceljs — columns: date, order#, customer, items, subtotal, tax, total |
-| 9.8 | Build `GET /api/reports/export/sales?format=pdf` | Generate PDF file using pdfkit — same columns formatted as table |
-| 9.9 | Build `GET /api/reports/export/inventory` | Excel export of current stock |
+| ✅ 9.1 | Build `GET /api/reports/sales` | Aggregation pipeline: group by period (daily/weekly/monthly/yearly). Return: `period`, `totalOrders`, `totalRevenue`, `averageOrderValue` |
+| ✅ 9.2 | Build `GET /api/reports/inventory/stock` | All products with stock levels, category, status |
+| ✅ 9.3 | Build `GET /api/reports/inventory/movement` | Stock transactions aggregated by product, filter by date/product/type |
+| ✅ 9.4 | Build `GET /api/reports/orders` | Group by status, count + total revenue per status, filter by date range |
+| ✅ 9.5 | Build `GET /api/reports/customers/top` | Top customers by total spend + total orders, `?limit=` param |
+| ✅ 9.6 | Build `GET /api/reports/customers/purchases` | Single customer purchase history with totals |
+| ✅ 9.7 | Build `GET /api/reports/export/sales?format=excel` | Generate Excel file using exceljs — columns: date, order#, customer, items, subtotal, tax, total |
+| ✅ 9.8 | Build `GET /api/reports/export/sales?format=pdf` | Generate PDF file using pdfkit — same columns formatted as table |
+| ✅ 9.9 | Build `GET /api/reports/export/inventory` | Excel export of current stock |
 
 ### Backend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T9.1 | Sales report | Correct grouping by period, date filter respected, empty period returns empty array |
-| T9.2 | Top customers | Correctly ordered by spend, limit respected, zero-spend customers excluded |
-| T9.3 | Export Excel | File generated, correct MIME type, has headers + data rows |
-| T9.4 | Export PDF | File generated, correct MIME type, readable content |
+| ✅ T9.1 | Sales report | Correct grouping by period, date filter respected, empty period returns empty array |
+| ✅ T9.2 | Top customers | Correctly ordered by spend, limit respected, zero-spend customers excluded |
+| ✅ T9.3 | Export Excel | File generated, correct MIME type, has headers + data rows |
+| ✅ T9.4 | Export PDF | File generated, correct MIME type, readable content |
 
 ### Frontend Tasks
 
 | # | Task | Details |
 |---|---|---|
-| 9.10 | Create SalesReport page | Line/bar chart (Recharts), period selector tabs (daily/weekly/monthly/yearly), date range picker, summary cards (total revenue, total orders, avg order value), export buttons |
-| 9.11 | Create InventoryReport page | Stock table + movement table, product filter, export button |
-| 9.12 | Create OrderReport page | Pie chart by status, bar chart over time, summary table |
-| 9.13 | Create CustomerReport page | Top customers table, customer search for individual purchase report |
-| 9.14 | Create report API module | `api/report.api.js` — getSales, getInventory, getOrders, getCustomers, export |
+| ✅ 9.10 | Create SalesReport page | Line/bar chart (Recharts), period selector tabs (daily/weekly/monthly/yearly), date range picker, summary cards (total revenue, total orders, avg order value), export buttons |
+| ✅ 9.11 | Create InventoryReport page | Stock table + movement table, product filter, export button |
+| ✅ 9.12 | Create OrderReport page | Pie chart by status, bar chart over time, summary table |
+| ✅ 9.13 | Create CustomerReport page | Top customers table, customer search for individual purchase report |
+| ✅ 9.14 | Create report API module | `api/report.api.js` — getSales, getInventory, getOrders, getCustomers, export |
 
 ### Frontend Testing
 
 | # | Test | What to Cover |
 |---|---|---|
-| T9.5 | SalesReport | Period tabs switch data, date picker filters, export button triggers download |
-| T9.6 | Charts render | Recharts renders correctly with data, handles empty data gracefully |
-| T9.7 | Export download | Correct file name, file type, data matches report |
+| ✅ T9.5 | SalesReport | Period tabs switch data, date picker filters, export button triggers download |
+| ✅ T9.6 | Charts render | Recharts renders correctly with data, handles empty data gracefully |
+| ✅ T9.7 | Export download | Correct file name, file type, data matches report |
 
 ---
 
